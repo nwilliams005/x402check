@@ -1,0 +1,15 @@
+{
+  "name": "@x402check/client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Call x402check before any x402 payment. Draft — not published.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": ["src", "README.md"],
+  "keywords": ["x402", "preflight", "agent", "trust", "mcp"],
+  "license": "MIT",
+  "engines": { "node": ">=18" }
+}

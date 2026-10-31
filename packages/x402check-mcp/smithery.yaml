@@ -1,0 +1,6 @@
+# Draft for Smithery publish — do not submit until HTTPS origin is live.
+startCommand:
+  type: http
+  configSchema:
+    type: object
+    properties: {}

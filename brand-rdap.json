@@ -1,0 +1,58 @@
+[
+  {
+    "name": "payvet",
+    "com": "taken",
+    "dev": "available",
+    "ai": "available",
+    "xyz": "taken"
+  },
+  {
+    "name": "tollcheck",
+    "com": "taken",
+    "dev": "available",
+    "ai": "available",
+    "xyz": "available"
+  },
+  {
+    "name": "agentvet",
+    "com": "taken",
+    "dev": "available",
+    "ai": "taken",
+    "xyz": "taken"
+  },
+  {
+    "name": "paylint",
+    "com": "taken",
+    "dev": "available",
+    "ai": "available",
+    "xyz": "available"
+  },
+  {
+    "name": "cleartoll",
+    "com": "taken",
+    "dev": "available",
+    "ai": "available",
+    "xyz": "available"
+  },
+  {
+    "name": "peekpay",
+    "com": "taken",
+    "dev": "available",
+    "ai": "available",
+    "xyz": "taken"
+  },
+  {
+    "name": "guard402",
+    "com": "taken",
+    "dev": "available",
+    "ai": "available",
+    "xyz": "available"
+  },
+  {
+    "name": "vetpay",
+    "com": "taken",
+    "dev": "available",
+    "ai": "taken",
+    "xyz": "taken"
+  }
+]

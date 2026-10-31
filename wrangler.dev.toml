@@ -1,0 +1,20 @@
+# Local / testnet — Base Sepolia + public facilitator. Used by `wrangler dev --config wrangler.dev.toml`.
+name = "x402check"
+main = "src/index.ts"
+compatibility_date = "2026-05-03"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+PAY_TO = "0xd98451514c7510e3fCd0463De973B9a6bB89A86f"
+NETWORK = "eip155:84532"
+PRICE = "$0.002"
+PRICE_PER_TOOL_USD = "0.002"
+CACHE_STALE_MS = "45000"
+FACILITATOR_URL = "https://x402.org/facilitator"
+ALLOW_LOCAL_BYPASS = "true"
+SERVICE_NAME = "x402check (dev/testnet)"
+
+[[kv_namespaces]]
+binding = "PAYTO_HISTORY"
+id = "00000000000000000000000000000000"
+preview_id = "00000000000000000000000000000000"

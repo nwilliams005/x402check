@@ -1,0 +1,10 @@
+{
+  "name": "@x402check/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP stdio bridge to remote x402check HTTP. Draft — not published.",
+  "type": "module",
+  "bin": { "x402check-mcp": "./src/stdio.js" },
+  "files": ["src", "server.json", "README.md", "smithery.yaml", "glama.json"],
+  "license": "MIT"
+}
