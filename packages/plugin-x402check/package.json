@@ -1,6 +1,6 @@
 {
   "name": "plugin-x402check",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "ElizaOS plugin for x402check — preflight x402 seller endpoints (ok|caution|avoid + history) before an agent pays. $0.002 Exact USDC on Base.",
   "type": "module",
   "main": "./src/index.js",
