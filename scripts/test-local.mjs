@@ -71,6 +71,7 @@ async function main() {
     const discoveryPaths = [
       "/",
       "/docs",
+      "/example",
       "/index.md",
       "/docs.md",
       "/llms.txt",
@@ -304,12 +305,84 @@ async function main() {
         }
         await sleep(1500);
       }
+      let hasV2 = false;
+      let hasSample = false;
+      let hasCors = false;
+      if (ok) {
+        const r2 = await fetch(`${BASE}/preflight?url=${encode(TARGETS[0])}`);
+        hasCors = (r2.headers.get("access-control-allow-origin") || "") === "*";
+        hasCors =
+          hasCors &&
+          (r2.headers.get("access-control-expose-headers") || "")
+            .toLowerCase()
+            .includes("payment-required");
+        try {
+          const b2 = await r2.json();
+          hasV2 = b2?.x402Version === 2 && Boolean(b2?.howToPay?.legacyNote);
+          hasSample = typeof b2?.howToPay?.sampleResponse === "string";
+        } catch {
+          /* ignore */
+        }
+      }
       results.push({
         test: "unpaid /preflight → 402 + howToPay",
         status,
-        ok,
+        ok: ok && hasV2 && hasSample,
         hasPaymentRequired: hasPr,
         hasHowToPay: hasHowTo,
+        hasV2,
+        hasSample,
+      });
+      results.push({
+        test: "402 CORS expose PAYMENT-REQUIRED",
+        status,
+        ok: ok && hasCors,
+        hasCors,
+      });
+    }
+
+    // OPTIONS preflight (CORS)
+    {
+      const r = await fetch(`${BASE}/preflight`, { method: "OPTIONS" });
+      const allow = (r.headers.get("access-control-allow-headers") || "").toLowerCase();
+      results.push({
+        test: "OPTIONS /preflight CORS",
+        status: r.status,
+        ok:
+          (r.status === 204 || r.status === 200) &&
+          r.headers.get("access-control-allow-origin") === "*" &&
+          allow.includes("payment-signature"),
+      });
+    }
+
+    // Free static example
+    {
+      const r = await fetch(`${BASE}/example`);
+      let body = null;
+      try {
+        body = await r.json();
+      } catch {
+        body = null;
+      }
+      results.push({
+        test: "GET /example free sample",
+        status: r.status,
+        ok:
+          r.status === 200 &&
+          body?.sample === true &&
+          body?.result?.verdict === "ok" &&
+          typeof body?.result?.history?.checks === "number",
+      });
+    }
+
+    // sitemap includes /example
+    {
+      const r = await fetch(`${BASE}/sitemap.xml`);
+      const text = await r.text();
+      results.push({
+        test: "sitemap includes /example",
+        status: r.status,
+        ok: r.status === 200 && text.includes("/example"),
       });
     }
 

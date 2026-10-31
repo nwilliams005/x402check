@@ -200,6 +200,34 @@ export function openApiSpec(origin: string, pricePerTool: number) {
           responses: { "200": { description: "OpenAPI 3.1" } },
         },
       },
+      "/example": {
+        get: {
+          operationId: "exampleResponse",
+          tags: ["discovery"],
+          summary: "Free static sample ToolCheck (not a live probe)",
+          description:
+            "Returns a fixed sample JSON matching a successful paid check so agents can inspect the shape before paying. " +
+            "sample:true. Never hits a seller or KV. Real checks: GET /preflight with x402 v2 PAYMENT-SIGNATURE.",
+          responses: {
+            "200": {
+              description: "Static example payload",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      sample: { type: "boolean" },
+                      note: { type: "string" },
+                      pricePerToolUsd: { type: "number" },
+                      result: { $ref: "#/components/schemas/ToolCheck" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
       "/llms.txt": {
         get: {
           operationId: "getLlmsTxt",
@@ -545,7 +573,7 @@ export function llmsFullTxt(origin: string, pricePerTool: number): string {
 ## FAQ for agents and people
 
 ### Is this x402 endpoint safe?
-Call GET ${origin}/preflight?url=SELLER_URL (pay $${pricePerTool} USDC first). Read verdict. avoid = do not pay. caution = escalate. ok = still enforce maxAmount. history.payToChanges and history.priceChanges show drift. This is an endpoint+history check, not a warranty and not an OFAC/drainer scan of a wallet.
+Preview shape free: GET ${origin}/example. Then call GET ${origin}/preflight?url=SELLER_URL (pay $${pricePerTool} USDC Exact on Base / x402 v2 PAYMENT-SIGNATURE). Read verdict. avoid = do not pay. caution = escalate. ok = still enforce maxAmount. history.payToChanges and history.priceChanges show drift. This is an endpoint+history check, not a warranty and not an OFAC/drainer scan of a wallet.
 
 ### Is this API legit or a scam / rug?
 We do not label "scam" as a legal finding. We surface reachability, whether a real 402 challenge exists, current payTo/price, and whether payTo or price changed over prior checks — signals agents use before paying. Treat avoid as deny; investigate caution.

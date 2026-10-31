@@ -355,6 +355,7 @@ export function sitemapXml(origin: string, lastmod: string): string {
   const urls = [
     "/",
     "/docs",
+    "/example",
     "/llms.txt",
     "/llms-full.txt",
     "/openapi.json",
@@ -385,25 +386,94 @@ ${body}
 `;
 }
 
-/** Clear 402 JSON body so agents know exactly how to pay (PAYMENT-REQUIRED header remains authoritative). */
+/** Free static sample ToolCheck (not a live probe; no payment). */
+export function exampleToolCheck(origin: string, pricePerTool: number) {
+  return {
+    sample: true,
+    note:
+      "Static example only — not a live probe and not billable. Call GET /preflight?url=… with an x402 v2 PAYMENT-SIGNATURE to run a real check.",
+    pricePerToolUsd: pricePerTool,
+    paidEndpoint: `${origin}/preflight`,
+    docs: `${origin}/docs`,
+    result: {
+      url: "https://www.api-xpay.com/x402/ping",
+      verdict: "ok",
+      checkedAt: "2026-10-31T18:00:00.000Z",
+      live: true,
+      cacheAgeMs: 0,
+      status: 402,
+      latencyMs: 180,
+      is402: true,
+      priceUsd: 0.005,
+      payTo: "0x589a2314a2E05F45e40C4823Da3Ba58D421dB3d8",
+      network: "eip155:8453",
+      reasonCodes: ["reachable", "http_402", "payto_stable"],
+      history: {
+        checks: 3,
+        uptimePct: 100,
+        lastOkAt: "2026-10-31T18:00:00.000Z",
+        lastFailAt: null,
+        payToChanges: [],
+        priceChanges: [],
+        recent: [
+          {
+            at: "2026-10-31T18:00:00.000Z",
+            live: true,
+            status: 402,
+            priceUsd: 0.005,
+            payTo: "0x589a2314a2E05F45e40C4823Da3Ba58D421dB3d8",
+          },
+        ],
+      },
+    },
+  };
+}
+
+/**
+ * Clear 402 JSON body so agents know exactly how to pay.
+ * PAYMENT-REQUIRED header remains authoritative (x402 v2).
+ * We speak v2 only: legacy v1-only clients must also register ExactEvmScheme for eip155:*.
+ */
 export function paymentRequiredBody(origin: string, pricePerTool: number) {
+  const atomic = String(Math.round(pricePerTool * 1_000_000));
   return {
     error: "payment_required",
-    message: `Payment required: $${pricePerTool} USDC Exact on Base (eip155:8453) per tool checked. Read the PAYMENT-REQUIRED header, create a PAYMENT-SIGNATURE, and retry.`,
+    x402Version: 2,
+    message: `Payment required: $${pricePerTool} USDC Exact on Base (eip155:8453) per tool checked. This server speaks x402 v2 only. Decode PAYMENT-REQUIRED, sign accepts[0], retry with PAYMENT-SIGNATURE.`,
     howToPay: {
       scheme: "exact",
       network: "eip155:8453",
+      networkAliases: { v2: "eip155:8453", v1LegacyName: "base" },
       asset: "USDC",
+      assetAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
       pricePerToolUsd: pricePerTool,
+      amountAtomicUsdc: atomic,
+      paymentHeaderIn: "PAYMENT-SIGNATURE",
+      challengeHeaderOut: "PAYMENT-REQUIRED",
+      legacyNote:
+        "x402 v1 clients that only register ExactEvmClientV1 / network \"base\" fail here with \"No client registered for x402 version: 2\". Also register ExactEvmScheme for eip155:* (or eip155:8453). Do not send X-PAYMENT alone — this server reads PAYMENT-SIGNATURE.",
       steps: [
-        "Decode the PAYMENT-REQUIRED response header (base64 JSON, x402 v2).",
-        "Build a PAYMENT-SIGNATURE covering accepts[0] (amount is atomic USDC units; $0.002 = \"2000\").",
-        "Retry the same request with header PAYMENT-SIGNATURE.",
-        "Or use an x402 client: npm i @x402/fetch / @x402/axios with ExactEvmScheme.",
+        "Decode the PAYMENT-REQUIRED response header (base64 JSON, x402Version:2, network eip155:8453).",
+        `Build a PAYMENT-SIGNATURE covering accepts[0] (amount is atomic USDC; $${pricePerTool} = \"${atomic}\").`,
+        "Retry the same request with header PAYMENT-SIGNATURE (not X-PAYMENT alone).",
+        "Recommended: npm i @x402/fetch @x402/evm — wrapFetchWithPayment + ExactEvmScheme on eip155:*.",
+        "MCP: tools/list is free; tools/call that hits /preflight still requires the same x402 payment on that HTTP hop.",
+        `Preview a sample JSON shape for free at GET ${origin}/example (static, not a live check).`,
       ],
+      compatibleClients: [
+        "@x402/fetch + ExactEvmScheme",
+        "@x402/axios + ExactEvmScheme",
+        "Coinbase AgentKit x402 action provider (v2)",
+        "Cloudflare Agents withX402Client",
+        "x402check-client (npm)",
+      ],
+      needsWallet: true,
+      walletHint:
+        "Caller needs a Base USDC-funded EVM wallet (or a custodial agent wallet that can sign Exact payments). No wallet → cannot settle.",
       docs: `${origin}/docs`,
       openapi: `${origin}/openapi.json`,
       llms: `${origin}/llms.txt`,
+      sampleResponse: `${origin}/example`,
       example: `GET ${origin}/preflight?url=https://seller.example/x402`,
     },
   };

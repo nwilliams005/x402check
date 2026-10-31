@@ -31,6 +31,7 @@ import {
   agentCard,
   agentJson,
   aiCatalog,
+  exampleToolCheck,
   mcpServerCardLegacy,
   mcpServerCardSep,
   paymentRequiredBody,
@@ -50,6 +51,62 @@ const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" 
 </svg>`;
 
 const app = new Hono<{ Bindings: Env }>();
+
+/** CORS for browser/agent runtimes that probe paid routes before paying. */
+const CORS_HEADERS: Record<string, string> = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Authorization, PAYMENT-SIGNATURE, PAYMENT-REQUIRED, X-PAYMENT, X-PAYMENT-RESPONSE, Accept",
+  "Access-Control-Expose-Headers":
+    "PAYMENT-REQUIRED, PAYMENT-RESPONSE, X-PAYMENT-RESPONSE",
+  "Access-Control-Max-Age": "86400",
+};
+
+app.use("*", async (c, next) => {
+  if (c.req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
+  await next();
+  for (const [k, v] of Object.entries(CORS_HEADERS)) {
+    if (!c.res.headers.has(k)) c.res.headers.set(k, v);
+  }
+});
+
+/**
+ * Bridge legacy X-PAYMENT → PAYMENT-SIGNATURE when the modern header is absent.
+ * Does not make v1 payloads settleable (ResourceServer is x402 v2); it only helps
+ * dual-header clients that still emit X-PAYMENT with a v2-shaped payload.
+ */
+function bridgeLegacyPaymentHeader(c: {
+  req: { header: (n: string) => string | undefined; raw: Request };
+}): void {
+  const legacy = c.req.header("X-PAYMENT");
+  const modern = c.req.header("PAYMENT-SIGNATURE");
+  if (!legacy || modern) return;
+  const headers = new Headers(c.req.raw.headers);
+  headers.set("PAYMENT-SIGNATURE", legacy);
+  const rebuilt = new Request(c.req.raw, { headers });
+  // Replace the underlying Request so @x402/hono extractPayment sees PAYMENT-SIGNATURE.
+  Object.defineProperty(c.req, "raw", { value: rebuilt, writable: true, configurable: true });
+}
+
+app.use("/preflight", async (c, next) => {
+  bridgeLegacyPaymentHeader(c);
+  await next();
+});
+
+app.use("/mcp", async (c, next) => {
+  bridgeLegacyPaymentHeader(c);
+  await next();
+});
+
+/** Free static sample — never hits sell()/KV; safe for agents that need a shape before paying. */
+app.get("/example", (c) => {
+  return c.json(exampleToolCheck(originOf(c), unit(c.env)), 200, {
+    "Cache-Control": "public, max-age=3600",
+  });
+});
 
 function unit(env: Env) {
   return unitPriceUsd(env.PRICE_PER_TOOL_USD || env.PRICE?.replace("$", ""));
@@ -362,6 +419,7 @@ app.use("/preflight", async (c, next) => {
     const headers = new Headers(res.headers);
     headers.set("Content-Type", "application/json");
     headers.set("Cache-Control", "no-store");
+    for (const [k, v] of Object.entries(CORS_HEADERS)) headers.set(k, v);
     return new Response(JSON.stringify(paymentRequiredBody(origin, unit(c.env))), {
       status: 402,
       headers,
