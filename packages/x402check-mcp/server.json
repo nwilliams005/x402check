@@ -1,0 +1,31 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "dev.x402check/mcp",
+  "description": "Preflight x402 sellers before pay: ok|caution|avoid + history. Paid per tool.",
+  "version": "0.1.1",
+  "websiteUrl": "https://x402check.dev",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "x402check-mcp",
+      "version": "0.1.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "X402CHECK_URL",
+          "description": "Origin of the deployed x402check worker (https://x402check.dev)",
+          "isRequired": true,
+          "format": "string"
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://x402check.dev/mcp"
+    }
+  ]
+}

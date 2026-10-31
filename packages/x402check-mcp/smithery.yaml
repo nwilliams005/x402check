@@ -1,0 +1,6 @@
+# Smithery — remote Streamable HTTP origin
+startCommand:
+  type: http
+  configSchema:
+    type: object
+    properties: {}

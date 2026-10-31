@@ -1,0 +1,44 @@
+{
+  "name": "x402check-mcp",
+  "version": "0.1.1",
+  "description": "MCP stdio bridge to x402check \u2014 preflight_check, verify_payto, compare_tools before paying (ok|caution|avoid + history).",
+  "type": "module",
+  "main": "./src/stdio.js",
+  "bin": {
+    "x402check-mcp": "./src/stdio.js"
+  },
+  "files": [
+    "src",
+    "server.json",
+    "README.md",
+    "LICENSE",
+    "smithery.yaml",
+    "glama.json"
+  ],
+  "keywords": [
+    "x402",
+    "mcp",
+    "ai-agent",
+    "trust",
+    "preflight",
+    "payto",
+    "base",
+    "usdc",
+    "scam-check",
+    "uptime",
+    "budget-guard",
+    "compare-tools",
+    "verify-payto",
+    "x402check"
+  ],
+  "homepage": "https://x402check.dev",
+  "bugs": {
+    "url": "https://x402check.dev/docs"
+  },
+  "author": "x402check",
+  "license": "MIT",
+  "mcpName": "dev.x402check/mcp",
+  "engines": {
+    "node": ">=18"
+  }
+}

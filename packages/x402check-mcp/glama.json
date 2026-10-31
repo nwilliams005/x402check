@@ -1,0 +1,5 @@
+{
+  "name": "x402check",
+  "description": "Trust-check x402 seller URLs before paying. Returns ok|caution|avoid + history.",
+  "category": "security"
+}

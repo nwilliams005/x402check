@@ -1,0 +1,11 @@
+node_modules/
+.wrangler/
+dist/
+.dev.vars
+*.log
+.npmtoken
+.x402test/
+.mcp-registry/
+*.pem
+.env
+.env.*
