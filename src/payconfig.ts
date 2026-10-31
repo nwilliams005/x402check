@@ -1,7 +1,9 @@
 /**
  * Payment networks + payTo config for x402 Exact.
- * Production: Base mainnet + Solana mainnet via CDP facilitator.
- * feePayer for SVM is injected by ExactSvmScheme from facilitator /supported.
+ * Production default: Base mainnet only (ENABLE_SOLANA=false).
+ * Solana Exact stays in code behind ENABLE_SOLANA=true + PAY_TO_SOLANA
+ * (requires an existing USDC ATA for payTo). feePayer for SVM comes from
+ * ExactSvmScheme + facilitator /supported.
  *
  * payTo on Solana is the OWNER pubkey. Clients TransferChecked to the USDC ATA
  * derived from (owner, mint). That ATA must already exist — @x402/svm does not
@@ -83,7 +85,15 @@ export type PayEnv = {
   NETWORK?: string;
   PAY_TO_SOLANA?: string;
   SOLANA_NETWORK?: string;
+  /** "true" / "1" to advertise Solana Exact. Default off until payTo ATA exists. */
+  ENABLE_SOLANA?: string;
 };
+
+/** Solana accept is opt-in; production keeps this false until USDC ATA exists. */
+export function isSolanaEnabled(env: PayEnv): boolean {
+  const v = (env.ENABLE_SOLANA || "").trim().toLowerCase();
+  return v === "true" || v === "1" || v === "yes";
+}
 
 export type ResolvedPayConfig = {
   evmPayTo: `0x${string}`;
@@ -93,15 +103,15 @@ export type ResolvedPayConfig = {
 };
 
 /**
- * Resolve payTo/network pairs. Solana is optional — omitted when PAY_TO_SOLANA
- * is empty/unset. When set, address must be a valid Solana pubkey.
+ * Resolve payTo/network pairs. Solana is omitted unless ENABLE_SOLANA is on
+ * AND PAY_TO_SOLANA is a valid pubkey. Production ships with the flag off.
  */
 export function resolvePayConfig(env: PayEnv): ResolvedPayConfig {
   const evmPayTo = (env.PAY_TO || DEFAULT_PAY_TO_EVM) as `0x${string}`;
   const evmNetwork = (env.NETWORK || BASE_MAINNET) as `${string}:${string}`;
 
   const rawSol = (env.PAY_TO_SOLANA || "").trim();
-  if (!rawSol) {
+  if (!isSolanaEnabled(env) || !rawSol) {
     return {
       evmPayTo,
       evmNetwork,
@@ -112,6 +122,34 @@ export function resolvePayConfig(env: PayEnv): ResolvedPayConfig {
   const solanaPayTo = assertSolanaPayTo(rawSol);
   const solanaNetwork = (env.SOLANA_NETWORK || SOLANA_MAINNET) as `${string}:${string}`;
   return { evmPayTo, evmNetwork, solanaPayTo, solanaNetwork };
+}
+
+/** Static PaymentRequirements-shaped Base accept for 402 JSON bodies / docs. */
+export function baseAcceptRequirement(
+  cfg: ResolvedPayConfig,
+  pricePerToolUsd: number,
+): Record<string, unknown> {
+  const amount = String(Math.round(pricePerToolUsd * 1_000_000));
+  const asset =
+    cfg.evmNetwork === BASE_MAINNET || cfg.evmNetwork === "eip155:8453"
+      ? USDC_BASE_MAINNET
+      : USDC_BASE_MAINNET; // docs/body still name Circle Base USDC; Sepolia uses facilitator asset
+  return {
+    scheme: "exact",
+    network: cfg.evmNetwork,
+    amount,
+    asset,
+    payTo: cfg.evmPayTo,
+    maxTimeoutSeconds: 60,
+    extra: {
+      name: "USD Coin",
+      version: "2",
+      pricePerToolUsd,
+      pricingModel: "per_tool",
+      assetHint: "USDC",
+      chainFamily: "evm",
+    },
+  };
 }
 
 /** Build the accepts[] list for paymentMiddleware routes. */

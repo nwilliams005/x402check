@@ -33,10 +33,11 @@
 - [ ] Document `X402CHECK_URL` in agent runtimes; default-on client wrapper
 - [ ] Optional Bazaar semantic keywords / iconUrl once domain live
 
-## Solana USDC (second accept)
+## Solana USDC (second accept — OFF in production)
 
-Production `accepts[]` lists Base (`eip155:8453`) and Solana mainnet
-(`solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`) at the same `$0.002`/tool.
+Production ships with `ENABLE_SOLANA=false`. Only Base (`eip155:8453`) is
+advertised in `accepts[]`. Code for Solana mainnet
+(`solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp`) remains behind the flag.
 `PAY_TO_SOLANA` is the owner pubkey; clients TransferChecked to its USDC ATA
 (mint `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`). CDP facilitator supplies
 `extra.feePayer`.

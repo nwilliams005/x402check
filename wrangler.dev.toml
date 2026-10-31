@@ -1,4 +1,4 @@
-# Local / testnet — Base Sepolia + Solana Devnet via public facilitator.
+# Local / testnet — Base Sepolia via public facilitator (Solana behind ENABLE_SOLANA).
 name = "x402check"
 main = "src/index.ts"
 compatibility_date = "2026-05-03"
@@ -9,6 +9,7 @@ PAY_TO = "0xd98451514c7510e3fCd0463De973B9a6bB89A86f"
 NETWORK = "eip155:84532"
 PAY_TO_SOLANA = "AAAU23APUxKMRT1fbig22q4JzxXgx81vPynan2LmPcuT"
 SOLANA_NETWORK = "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"
+ENABLE_SOLANA = "false"
 PRICE = "$0.002"
 PRICE_PER_TOOL_USD = "0.002"
 CACHE_STALE_MS = "45000"

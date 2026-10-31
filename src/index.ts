@@ -1,7 +1,7 @@
 /**
  * x402 Tool Trust Preflight — paid per-tool checks (no free tier for probes).
- * Production: Base + Solana mainnet USDC via CDP. Dev: wrangler.dev.toml Sepolia (+ Solana Devnet).
- * Do not deploy without Nicklaus's explicit approval.
+ * Production: Base mainnet USDC via CDP (Solana behind ENABLE_SOLANA=false).
+ * Dev: wrangler.dev.toml Base Sepolia. Do not deploy without Nicklaus's explicit approval.
  */
 import { Hono } from "hono";
 import { paymentMiddleware, x402ResourceServer } from "@x402/hono";
@@ -11,7 +11,7 @@ import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import type { HTTPRequestContext } from "@x402/core/server";
 import type { Env, ToolCheck } from "./types";
 import { createFacilitatorClient } from "./facilitator";
-import { buildAccepts, resolvePayConfig } from "./payconfig";
+import { baseAcceptRequirement, buildAccepts, resolvePayConfig } from "./payconfig";
 import { checkTool, isBlockedHost } from "./preflight";
 import {
   DEFAULT_PRICE_PER_TOOL_USD,
@@ -286,7 +286,7 @@ function paymentRoutes(env: Env, origin: string) {
     "compare-tools",
     "budget-guard",
     "base",
-    "solana",
+    ...(pay.solanaPayTo ? (["solana"] as const) : []),
   ];
   const iconUrl = `${origin}/assets/icon.svg`;
 
@@ -404,7 +404,7 @@ app.use("/preflight", async (c, next) => {
   );
   const out = await mw(c, next);
 
-  // Enrich bare 402 JSON bodies so agents know exactly how to pay.
+  // Enrich 402 JSON bodies: include non-empty accepts[] (x402dash + agents).
   // Keep PAYMENT-REQUIRED / other headers from the middleware.
   const res = out instanceof Response ? out : c.res;
   if (res && res.status === 402) {
@@ -412,10 +412,31 @@ app.use("/preflight", async (c, next) => {
     headers.set("Content-Type", "application/json");
     headers.set("Cache-Control", "no-store");
     for (const [k, v] of Object.entries(CORS_HEADERS)) headers.set(k, v);
-    return new Response(JSON.stringify(paymentRequiredBody(origin, unit(c.env))), {
-      status: 402,
-      headers,
-    });
+
+    let accepts: Array<Record<string, unknown>> = [];
+    const pr =
+      headers.get("PAYMENT-REQUIRED") || headers.get("payment-required") || "";
+    if (pr) {
+      try {
+        const decoded = JSON.parse(atob(pr)) as { accepts?: unknown };
+        if (Array.isArray(decoded.accepts)) {
+          accepts = decoded.accepts.filter(
+            (a): a is Record<string, unknown> =>
+              !!a && typeof a === "object" && !Array.isArray(a),
+          );
+        }
+      } catch {
+        /* fall through to static Base accept */
+      }
+    }
+    if (!accepts.length) {
+      accepts = [baseAcceptRequirement(pay, unit(c.env))];
+    }
+
+    return new Response(
+      JSON.stringify(paymentRequiredBody(origin, unit(c.env), accepts)),
+      { status: 402, headers },
+    );
   }
   return out;
 });

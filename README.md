@@ -1,6 +1,6 @@
 # x402check
 
-Paid per-tool trust check before an AI agent pays an x402 endpoint. **No free checks.** Unit **$0.002**/tool (Exact USDC on Base or Solana). Live: **https://x402check.dev**
+Paid per-tool trust check before an AI agent pays an x402 endpoint. **No free checks.** Unit **$0.002**/tool (Exact USDC on Base). Live: **https://x402check.dev**
 
 Batch POST = N×unit in one Exact settlement.
 

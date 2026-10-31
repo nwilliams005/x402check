@@ -85,10 +85,12 @@ export interface BatchResult {
 export interface Env {
   PAY_TO: string;
   NETWORK: string;
-  /** Solana owner pubkey for Exact USDC (optional — omit to Base-only). */
+  /** Solana owner pubkey for Exact USDC (ignored unless ENABLE_SOLANA=true). */
   PAY_TO_SOLANA?: string;
   /** CAIP-2 Solana network, e.g. solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp */
   SOLANA_NETWORK?: string;
+  /** Opt-in Solana Exact accept. Production keeps false until payTo USDC ATA exists. */
+  ENABLE_SOLANA?: string;
   /** Unit price string for docs; dynamic pricing uses PRICE_PER_TOOL_USD */
   PRICE: string;
   PRICE_PER_TOOL_USD: string;

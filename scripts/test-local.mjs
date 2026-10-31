@@ -341,21 +341,17 @@ async function main() {
       });
     }
 
-    // Dual-network accepts: Base (EVM) + Solana in PAYMENT-REQUIRED
+    // Base-only accepts in header + JSON body (x402dash requires body.accepts[])
     {
       const r = await fetch(`${BASE}/preflight?url=${encode(TARGETS[0])}`);
       const pr =
         r.headers.get("payment-required") || r.headers.get("PAYMENT-REQUIRED");
-      let networks = [];
-      let hasFeePayer = false;
-      let hasSolPayTo = false;
-      let bodyNetworks = false;
+      let headerNetworks = [];
+      let bodyAccepts = [];
+      let body = null;
       try {
-        const body = await r.json();
-        bodyNetworks =
-          Array.isArray(body?.howToPay?.networks) &&
-          body.howToPay.networks.some((n) => String(n.network).startsWith("solana:")) &&
-          body.howToPay.networks.some((n) => String(n.network).startsWith("eip155:"));
+        body = await r.json();
+        bodyAccepts = Array.isArray(body?.accepts) ? body.accepts : [];
       } catch {
         /* ignore */
       }
@@ -364,38 +360,55 @@ async function main() {
           const raw = Buffer.from(pr, "base64").toString("utf8");
           const decoded = JSON.parse(raw);
           const accepts = decoded?.accepts || decoded?.paymentRequirements || [];
-          networks = (Array.isArray(accepts) ? accepts : []).map((a) => a.network);
-          const sol = (Array.isArray(accepts) ? accepts : []).find((a) =>
-            String(a.network || "").startsWith("solana:"),
+          headerNetworks = (Array.isArray(accepts) ? accepts : []).map(
+            (a) => a.network,
           );
-          hasFeePayer = Boolean(sol?.extra?.feePayer);
-          hasSolPayTo =
-            typeof sol?.payTo === "string" && sol.payTo.length >= 32;
         } catch {
           /* ignore */
         }
       }
-      const hasBase = networks.some((n) => String(n).startsWith("eip155:"));
-      const hasSol = networks.some((n) => String(n).startsWith("solana:"));
+      const bodyNetworks = bodyAccepts.map((a) => a?.network);
+      const hasBaseHeader = headerNetworks.some((n) =>
+        String(n).startsWith("eip155:"),
+      );
+      const hasBaseBody = bodyNetworks.some((n) =>
+        String(n).startsWith("eip155:"),
+      );
+      const hasSolHeader = headerNetworks.some((n) =>
+        String(n).startsWith("solana:"),
+      );
+      const hasSolBody = bodyNetworks.some((n) =>
+        String(n).startsWith("solana:"),
+      );
       results.push({
-        test: "402 accepts Base + Solana",
+        test: "402 body+header accepts Base only",
         status: r.status,
-        ok: r.status === 402 && hasBase && hasSol && hasFeePayer && hasSolPayTo && bodyNetworks,
-        networks,
-        hasFeePayer,
-        hasSolPayTo,
+        ok:
+          r.status === 402 &&
+          bodyAccepts.length >= 1 &&
+          hasBaseHeader &&
+          hasBaseBody &&
+          !hasSolHeader &&
+          !hasSolBody &&
+          typeof bodyAccepts[0]?.payTo === "string" &&
+          typeof bodyAccepts[0]?.amount === "string",
+        headerNetworks,
         bodyNetworks,
+        bodyAcceptsLen: bodyAccepts.length,
       });
     }
 
-    // Discovery docs mention Solana
+    // Discovery docs: Base advertised; Solana not claimed as live payment
     {
       const r = await fetch(`${BASE}/llms.txt`);
       const text = await r.text();
       results.push({
-        test: "llms.txt mentions Solana",
+        test: "llms.txt Base-only (no Solana payment claim)",
         status: r.status,
-        ok: r.status === 200 && /solana/i.test(text),
+        ok:
+          r.status === 200 &&
+          /eip155:8453|Base/i.test(text) &&
+          !/solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/i.test(text),
       });
     }
     {
@@ -406,12 +419,14 @@ async function main() {
         spec?.paths?.["/preflight"]?.get?.["x-payment-info"]?.protocols || [];
       const protoNets = protocols.map((p) => p?.x402?.network).filter(Boolean);
       results.push({
-        test: "openapi lists Solana network",
+        test: "openapi lists Base only (no Solana)",
         status: r.status,
         ok:
           r.status === 200 &&
-          nets.some((n) => String(n).startsWith("solana:")) &&
-          protoNets.some((n) => String(n).startsWith("solana:")),
+          nets.some((n) => String(n).startsWith("eip155:")) &&
+          !nets.some((n) => String(n).startsWith("solana:")) &&
+          protoNets.some((n) => String(n).startsWith("eip155:")) &&
+          !protoNets.some((n) => String(n).startsWith("solana:")),
         networks: nets,
         protocolNetworks: protoNets,
       });
@@ -419,10 +434,14 @@ async function main() {
     {
       const r = await fetch(`${BASE}/.well-known/x402`);
       const body = await r.json();
+      const s = JSON.stringify(body);
       results.push({
-        test: "x402 well-known mentions Solana",
+        test: "x402 well-known Base-only",
         status: r.status,
-        ok: r.status === 200 && /solana/i.test(JSON.stringify(body)),
+        ok:
+          r.status === 200 &&
+          /eip155:8453|Base/i.test(s) &&
+          !/solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp/i.test(s),
       });
     }
 

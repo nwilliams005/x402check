@@ -1,4 +1,4 @@
-# Production — x402check.dev — Base + Solana mainnet USDC via CDP
+# Production — x402check.dev — Base mainnet USDC via CDP (Solana behind ENABLE_SOLANA)
 name = "x402check"
 main = "src/index.ts"
 compatibility_date = "2026-05-03"
@@ -15,6 +15,7 @@ PAY_TO = "0xd98451514c7510e3fCd0463De973B9a6bB89A86f"
 NETWORK = "eip155:8453"
 PAY_TO_SOLANA = "AAAU23APUxKMRT1fbig22q4JzxXgx81vPynan2LmPcuT"
 SOLANA_NETWORK = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+ENABLE_SOLANA = "false"
 PRICE = "$0.002"
 PRICE_PER_TOOL_USD = "0.002"
 CACHE_STALE_MS = "45000"

@@ -71,6 +71,18 @@ check("CAIP-2 Solana mainnet id is expected shape", () => {
   assert.match(SOLANA_MAINNET, /^solana:[1-9A-HJ-NP-Za-km-z]+$/);
 });
 
+check("ENABLE_SOLANA defaults off without flag", () => {
+  function isSolanaEnabled(env) {
+    const v = (env.ENABLE_SOLANA || "").trim().toLowerCase();
+    return v === "true" || v === "1" || v === "yes";
+  }
+  assert.equal(isSolanaEnabled({}), false);
+  assert.equal(isSolanaEnabled({ ENABLE_SOLANA: "false", PAY_TO_SOLANA: DEFAULT_PAY_TO_SOLANA }), false);
+  assert.equal(isSolanaEnabled({ ENABLE_SOLANA: "true" }), true);
+  assert.equal(isSolanaEnabled({ ENABLE_SOLANA: "1" }), true);
+});
+
+
 console.log(JSON.stringify(results, null, 2));
 const failed = results.filter((r) => !r.ok);
 if (failed.length) {
