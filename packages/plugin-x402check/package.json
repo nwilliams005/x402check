@@ -1,0 +1,73 @@
+{
+  "name": "plugin-x402check",
+  "version": "0.1.0",
+  "description": "ElizaOS plugin for x402check — preflight x402 seller endpoints (ok|caution|avoid + history) before an agent pays. $0.002 Exact USDC on Base.",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src",
+    "images",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": [
+    "elizaos",
+    "elizaos-plugin",
+    "eliza",
+    "plugin",
+    "x402",
+    "x402check",
+    "ai-agent",
+    "preflight",
+    "payto",
+    "trust",
+    "scam-check",
+    "base",
+    "usdc",
+    "budget-guard",
+    "compare-tools",
+    "verify-payto"
+  ],
+  "homepage": "https://x402check.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nwilliams005/plugin-x402check.git"
+  },
+  "bugs": {
+    "url": "https://x402check.dev/docs"
+  },
+  "author": "x402check",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "x402check-client": "^0.1.1"
+  },
+  "peerDependencies": {
+    "@elizaos/core": ">=1.0.0"
+  },
+  "agentConfig": {
+    "pluginType": "elizaos:plugin:1.0.0",
+    "pluginParameters": {
+      "X402CHECK_URL": {
+        "type": "string",
+        "required": false,
+        "default": "https://x402check.dev",
+        "description": "Origin of the x402check worker."
+      },
+      "X402CHECK_SKIP": {
+        "type": "string",
+        "required": false,
+        "default": "0",
+        "description": "Set to 1 to skip preflight (synthetic ok)."
+      }
+    }
+  }
+}

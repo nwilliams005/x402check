@@ -1,0 +1,59 @@
+{
+  "name": "x402check-ai-sdk",
+  "version": "0.1.0",
+  "description": "Vercel AI SDK tools for x402check — preflight_check, verify_payto, compare_tools and beforePayment guard before an agent pays an x402 endpoint (ok|caution|avoid).",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": [
+    "x402",
+    "x402check",
+    "vercel-ai",
+    "ai-sdk",
+    "ai-agent",
+    "preflight",
+    "payto",
+    "trust",
+    "scam-check",
+    "base",
+    "usdc",
+    "budget-guard",
+    "compare-tools",
+    "verify-payto"
+  ],
+  "homepage": "https://x402check.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nwilliams005/x402check.git",
+    "directory": "packages/x402check-ai-sdk"
+  },
+  "bugs": {
+    "url": "https://x402check.dev/docs"
+  },
+  "author": "x402check",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "x402check-client": "^0.1.1"
+  },
+  "peerDependencies": {
+    "ai": ">=4.0.0",
+    "zod": ">=3.23.0"
+  },
+  "devDependencies": {
+    "ai": "^5.0.0",
+    "zod": "^3.25.76"
+  }
+}

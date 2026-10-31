@@ -20,6 +20,10 @@ Live site: **https://x402check.dev**
 | MCP Registry | `dev.x402check/mcp` |
 | npm client | [`x402check-client`](https://www.npmjs.com/package/x402check-client) |
 | npm MCP bridge | [`x402check-mcp`](https://www.npmjs.com/package/x402check-mcp) |
+| Vercel AI SDK | [`x402check-ai-sdk`](https://www.npmjs.com/package/x402check-ai-sdk) |
+| LangChain JS | [`x402check-langchain`](https://www.npmjs.com/package/x402check-langchain) |
+| ElizaOS plugin | [`plugin-x402check`](https://www.npmjs.com/package/plugin-x402check) |
+| Cloudflare template | [x402check-cloudflare-agent](https://github.com/nwilliams005/x402check-cloudflare-agent) |
 
 ## Why agents call it
 
@@ -36,8 +40,12 @@ Use x402check when you need to:
 
 ```
 packages/
-  x402check-client/   # npm: wrap any pay() with a preflight
-  x402check-mcp/      # npm: stdio MCP bridge → https://x402check.dev/mcp
+  x402check-client/        # npm: wrap any pay() with a preflight
+  x402check-mcp/           # npm: stdio MCP bridge → https://x402check.dev/mcp
+  x402check-ai-sdk/        # npm: Vercel AI SDK tools + beforePayment
+  x402check-langchain/     # npm: LangChain JS tools
+  x402check-langchain-py/  # PyPI-ready LangChain Python tools
+  plugin-x402check/        # npm: ElizaOS plugin
 ```
 
 ### Client

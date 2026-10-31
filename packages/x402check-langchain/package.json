@@ -1,0 +1,59 @@
+{
+  "name": "x402check-langchain",
+  "version": "0.1.0",
+  "description": "LangChain JS tools for x402check — preflight_check, verify_payto, compare_tools before an agent pays an x402 endpoint (ok|caution|avoid + history).",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": [
+    "x402",
+    "x402check",
+    "langchain",
+    "langgraph",
+    "ai-agent",
+    "preflight",
+    "payto",
+    "trust",
+    "scam-check",
+    "base",
+    "usdc",
+    "budget-guard",
+    "compare-tools",
+    "verify-payto"
+  ],
+  "homepage": "https://x402check.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nwilliams005/x402check.git",
+    "directory": "packages/x402check-langchain"
+  },
+  "bugs": {
+    "url": "https://x402check.dev/docs"
+  },
+  "author": "x402check",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "x402check-client": "^0.1.1"
+  },
+  "peerDependencies": {
+    "@langchain/core": ">=0.3.0",
+    "zod": ">=3.23.0"
+  },
+  "devDependencies": {
+    "@langchain/core": "^1.3.2",
+    "zod": "^3.25.76"
+  }
+}
