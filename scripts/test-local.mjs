@@ -9,6 +9,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 const BASE = process.env.BASE_URL || "http://127.0.0.1:8787";
 const WRANGLER_CACHE_DIR = process.env.WRANGLER_CACHE_DIR || "/tmp/wcache";
+const INDEXNOW_KEY = "32f90a760723b12a25ff3e310dbfd64a";
 
 const TARGETS = [
   "https://www.api-xpay.com/x402/ping",
@@ -70,19 +71,77 @@ async function main() {
     const discoveryPaths = [
       "/",
       "/docs",
+      "/index.md",
+      "/docs.md",
       "/llms.txt",
+      "/llms-full.txt",
       "/openapi.json",
       "/mcp.json",
+      "/mcp/server-card",
       "/robots.txt",
+      "/sitemap.xml",
       "/assets/style.css",
+      "/assets/icon.svg",
+      `/${INDEXNOW_KEY}.txt`,
       "/.well-known/agent-card.json",
       "/.well-known/agent.json",
       "/.well-known/x402",
       "/.well-known/mcp/server-card.json",
+      "/.well-known/ai-catalog.json",
     ];
     for (const path of discoveryPaths) {
       const r = await fetch(`${BASE}${path}`);
       results.push({ test: `GET ${path}`, status: r.status, ok: r.status === 200 });
+    }
+
+    // robots.txt must Allow AI crawlers and advertise sitemap
+    {
+      const r = await fetch(`${BASE}/robots.txt`);
+      const text = await r.text();
+      results.push({
+        test: "robots.txt AI + sitemap",
+        status: r.status,
+        ok:
+          r.status === 200 &&
+          text.includes("Sitemap:") &&
+          text.includes("GPTBot") &&
+          text.includes("ClaudeBot") &&
+          text.includes("Allow: /") &&
+          !text.includes("Disallow: /"),
+      });
+    }
+
+    // sitemap must include key discovery URLs
+    {
+      const r = await fetch(`${BASE}/sitemap.xml`);
+      const text = await r.text();
+      results.push({
+        test: "sitemap.xml coverage",
+        status: r.status,
+        ok:
+          r.status === 200 &&
+          text.includes("/llms.txt") &&
+          text.includes("/openapi.json") &&
+          text.includes("/mcp/server-card") &&
+          text.includes("/.well-known/ai-catalog.json"),
+      });
+    }
+
+    // landing must have OG + JSON-LD + canonical
+    {
+      const r = await fetch(`${BASE}/`);
+      const html = await r.text();
+      results.push({
+        test: "landing SEO (og/canonical/json-ld)",
+        status: r.status,
+        ok:
+          r.status === 200 &&
+          html.includes('rel="canonical"') &&
+          html.includes("og:title") &&
+          html.includes("application/ld+json") &&
+          html.includes("FAQPage") &&
+          html.includes("is this x402 endpoint safe"),
+      });
     }
 
     // OpenAPI must advertise x-guidance + x-payment-info for x402scan
@@ -98,7 +157,69 @@ async function main() {
           typeof spec?.info?.["x-guidance"] === "string" &&
           getOp?.operationId === "preflightCheck" &&
           Boolean(getOp?.["x-payment-info"]) &&
-          Boolean(getOp?.responses?.["402"]),
+          Boolean(getOp?.responses?.["402"]) &&
+          Boolean(spec?.paths?.["/llms-full.txt"]) &&
+          Boolean(spec?.paths?.["/mcp/server-card"]) &&
+          Boolean(spec?.paths?.["/.well-known/ai-catalog.json"]),
+      });
+    }
+
+    // x402 well-known: version 1 + resources as URL strings
+    {
+      const r = await fetch(`${BASE}/.well-known/x402`);
+      const body = await r.json();
+      results.push({
+        test: "x402 well-known canonical",
+        status: r.status,
+        ok:
+          r.status === 200 &&
+          body?.version === 1 &&
+          Array.isArray(body?.resources) &&
+          typeof body.resources[0] === "string" &&
+          body.resources[0].includes("/preflight"),
+      });
+    }
+
+    // SEP-2127 MCP server card content-type + remotes
+    {
+      const r = await fetch(`${BASE}/mcp/server-card`);
+      const ct = r.headers.get("content-type") || "";
+      const body = await r.json();
+      results.push({
+        test: "mcp/server-card SEP-2127",
+        status: r.status,
+        ok:
+          r.status === 200 &&
+          ct.includes("mcp-server-card") &&
+          body?.name === "dev.x402check/mcp" &&
+          Array.isArray(body?.remotes) &&
+          body.remotes[0]?.type === "streamable-http",
+      });
+    }
+
+    // AI Catalog
+    {
+      const r = await fetch(`${BASE}/.well-known/ai-catalog.json`);
+      const body = await r.json();
+      results.push({
+        test: "ai-catalog.json",
+        status: r.status,
+        ok:
+          r.status === 200 &&
+          body?.specVersion === "1.0" &&
+          Array.isArray(body?.entries) &&
+          body.entries.some((e) => e.type === "application/mcp-server-card+json"),
+      });
+    }
+
+    // IndexNow key file
+    {
+      const r = await fetch(`${BASE}/${INDEXNOW_KEY}.txt`);
+      const text = (await r.text()).trim();
+      results.push({
+        test: "IndexNow key file",
+        status: r.status,
+        ok: r.status === 200 && text === INDEXNOW_KEY,
       });
     }
 
@@ -140,27 +261,36 @@ async function main() {
       });
     }
 
-    // Unpaid /preflight → 402 (retry once on facilitator flake)
+    // Unpaid /preflight → 402 with howToPay body
     {
       let ok = false;
       let status = 0;
       let hasPr = false;
+      let hasHowTo = false;
       for (let i = 0; i < 4; i++) {
         const r = await fetch(`${BASE}/preflight?url=${encode(TARGETS[0])}`);
         status = r.status;
         const pr = r.headers.get("payment-required") || r.headers.get("PAYMENT-REQUIRED");
         hasPr = Boolean(pr);
-        if (status === 402) {
+        let body = null;
+        try {
+          body = await r.json();
+        } catch {
+          body = null;
+        }
+        hasHowTo = Boolean(body?.howToPay?.steps);
+        if (status === 402 && hasHowTo) {
           ok = true;
           break;
         }
         await sleep(1500);
       }
       results.push({
-        test: "unpaid /preflight → 402",
+        test: "unpaid /preflight → 402 + howToPay",
         status,
         ok,
         hasPaymentRequired: hasPr,
+        hasHowToPay: hasHowTo,
       });
     }
 

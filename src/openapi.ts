@@ -27,23 +27,37 @@ export function openApiSpec(origin: string, pricePerTool: number) {
     openapi: "3.1.0",
     info: {
       title: "x402check",
-      version: "0.2.0",
+      version: "0.2.1",
       summary: "Paid per-tool trust check before an agent pays an x402 endpoint",
       description:
         "Call BEFORE any x402 payment to a third-party tool. Every check is paid " +
         `($${unit}/tool). GET checks one URL; POST batches up to 25 (N×unit in one Exact settlement). ` +
         "Response: compact verdict (ok|caution|avoid) + that tool's history only (checks, uptime, payTo/price changes). " +
+        "Answers agent questions: is this x402 endpoint safe? verify payTo; detect price drift; check uptime before settle. " +
         "If verdict=avoid do not pay. Cached history targets <300ms; live probe when stale.",
-      contact: { name: "operator", email: "ops@example.com" },
+      contact: {
+        name: "x402check",
+        email: "hustlelab@mail.grokbot.com",
+        url: origin,
+      },
       "x-guidance":
         "Always call GET /preflight?url=SELLER_URL (or POST batch) before PAYMENT-SIGNATURE to that seller. " +
         "Deny payment when verdict=avoid; escalate when caution; still enforce your maxAmount when ok. " +
-        `Unit price $${unit} USDC Exact. Discovery: ${origin}/llms.txt ${origin}/.well-known/agent-card.json ${origin}/mcp.json`,
+        `Unit price $${unit} USDC Exact on Base (eip155:8453). ` +
+        "Use when: is this x402 endpoint safe, verify payTo, check price history, compare sellers before paying. " +
+        `Discovery: ${origin}/llms.txt ${origin}/.well-known/agent-card.json ${origin}/.well-known/ai-catalog.json ${origin}/mcp/server-card ${origin}/openapi.json`,
       "x-x402": {
         scheme: "exact",
         pricePerToolUsd: unit,
         networks: ["eip155:8453", "eip155:84532"],
         asset: "USDC",
+      },
+      "x-discovery": {
+        ownershipProofs: [],
+        wellKnown: `${origin}/.well-known/x402`,
+        agentCard: `${origin}/.well-known/agent-card.json`,
+        aiCatalog: `${origin}/.well-known/ai-catalog.json`,
+        mcpServerCard: `${origin}/mcp/server-card`,
       },
     },
     servers: [{ url: origin, description: "This deployment" }],
@@ -59,8 +73,10 @@ export function openApiSpec(origin: string, pricePerTool: number) {
           summary: "Trust-check one x402 seller URL before paying it",
           description:
             "WHEN TO USE: immediately before settling payment to any x402 tool you have not verified this session, " +
-            "or when payTo/price may have drifted. Returns only that tool's verdict + history. " +
-            "Do not pay the target if verdict is avoid. Probe is a read-only GET to the target (we never pay it).",
+            "or when payTo/price may have drifted. Also when asking 'is this x402 endpoint safe' or 'verify payTo'. " +
+            "Returns only that tool's verdict + history. Do not pay the target if verdict is avoid. " +
+            "Probe is a read-only GET to the target (we never pay it).",
+          security: [{ x402Payment: [] }],
           parameters: [
             {
               name: "url",
@@ -108,7 +124,13 @@ export function openApiSpec(origin: string, pricePerTool: number) {
               },
             },
             "402": {
-              description: "Payment Required — x402 Exact; PAYMENT-REQUIRED header present",
+              description:
+                "Payment Required — x402 Exact. PAYMENT-REQUIRED header is authoritative; JSON body explains how to pay.",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/PaymentRequired" },
+                },
+              },
             },
           },
         },
@@ -119,6 +141,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
           description:
             "WHEN TO USE: compare multiple candidate x402 tools before choosing which to pay. " +
             `Charge = len(urls) × $${unit} in ONE Exact settlement (not N separate txs). Max 25.`,
+          security: [{ x402Payment: [] }],
           requestBody: {
             required: true,
             content: {
@@ -179,6 +202,15 @@ export function openApiSpec(origin: string, pricePerTool: number) {
           responses: { "200": { description: "text/plain markdown" } },
         },
       },
+      "/llms-full.txt": {
+        get: {
+          operationId: "getLlmsFullTxt",
+          tags: ["discovery"],
+          summary: "Full concatenated LLM docs (llms-full.txt convention)",
+          security: [],
+          responses: { "200": { description: "text/plain markdown" } },
+        },
+      },
       "/mcp.json": {
         get: {
           operationId: "getMcpDescriptor",
@@ -186,6 +218,15 @@ export function openApiSpec(origin: string, pricePerTool: number) {
           summary: "MCP server wrapper description",
           security: [],
           responses: { "200": { description: "MCP descriptor JSON" } },
+        },
+      },
+      "/mcp/server-card": {
+        get: {
+          operationId: "getMcpServerCard",
+          tags: ["discovery"],
+          summary: "SEP-2127 MCP Server Card",
+          security: [],
+          responses: { "200": { description: "application/mcp-server-card+json" } },
         },
       },
       "/.well-known/agent-card.json": {
@@ -206,6 +247,24 @@ export function openApiSpec(origin: string, pricePerTool: number) {
           responses: { "200": { description: "x402 well-known JSON" } },
         },
       },
+      "/.well-known/ai-catalog.json": {
+        get: {
+          operationId: "getAiCatalog",
+          tags: ["discovery"],
+          summary: "AI Catalog (MCP Server Card discovery)",
+          security: [],
+          responses: { "200": { description: "application/ai-catalog+json" } },
+        },
+      },
+      "/sitemap.xml": {
+        get: {
+          operationId: "getSitemap",
+          tags: ["discovery"],
+          summary: "XML sitemap for search engines",
+          security: [],
+          responses: { "200": { description: "application/xml" } },
+        },
+      },
     },
     components: {
       securitySchemes: {
@@ -222,6 +281,14 @@ export function openApiSpec(origin: string, pricePerTool: number) {
           properties: {
             error: { type: "string" },
             message: { type: "string" },
+          },
+        },
+        PaymentRequired: {
+          type: "object",
+          properties: {
+            error: { type: "string", const: "payment_required" },
+            message: { type: "string" },
+            howToPay: { type: "object" },
           },
         },
         ToolCheck: {
@@ -278,11 +345,13 @@ export function openApiSpec(origin: string, pricePerTool: number) {
 export function mcpDescriptor(origin: string, pricePerTool: number) {
   return {
     name: "x402check",
-    version: "0.2.0",
+    version: "0.2.1",
     description:
-      "Before any x402 payment: trust-check the seller URL. Returns ok|caution|avoid + that tool's history. Paid per tool.",
+      "Before any x402 payment: trust-check the seller URL. Returns ok|caution|avoid + that tool's history. Paid per tool. Use for is-this-x402-endpoint-safe and verify-payTo.",
     transport: { type: "streamable-http", url: `${origin}/mcp` },
-    serverCard: `${origin}/.well-known/mcp/server-card.json`,
+    serverCard: `${origin}/mcp/server-card`,
+    legacyServerCard: `${origin}/.well-known/mcp/server-card.json`,
+    aiCatalog: `${origin}/.well-known/ai-catalog.json`,
     pricing: {
       model: "x402-exact",
       pricePerToolUsd: pricePerTool,
@@ -294,7 +363,7 @@ export function mcpDescriptor(origin: string, pricePerTool: number) {
       {
         name: "preflight_check",
         description:
-          "Trust-check one x402 seller URL before paying it. Call when about to settle. Deny pay if verdict=avoid.",
+          "Trust-check one x402 seller URL before paying it. Call when about to settle, or when asking is this x402 endpoint safe / verify payTo. Deny pay if verdict=avoid.",
         inputSchema: {
           type: "object",
           required: ["url"],
@@ -332,7 +401,7 @@ export function mcpDescriptor(origin: string, pricePerTool: number) {
       },
     ],
     adoptionHints: [
-      "Use npm @scope/x402check-client to auto-call preflight before any x402 pay.",
+      "Use npm x402check-client to auto-call preflight before any x402 pay.",
       "Default-on in agent runtimes with PREFLIGHT_URL + kill-switch env.",
       "List on CDP Bazaar via successful settle + declareDiscoveryExtension (no discoverable:true).",
       "Register origin on x402scan; submit to 402 Index / x402dash / x402-trust.",
@@ -346,34 +415,172 @@ export function mcpDescriptor(origin: string, pricePerTool: number) {
 export function llmsTxt(origin: string, pricePerTool: number): string {
   return `# x402check
 
-> Paid per-tool trust check before an AI agent pays an x402 endpoint. No free checks. Unit $${pricePerTool} USDC Exact. Batch = N × unit in one payment.
+> Paid per-tool trust check before an AI agent pays an x402 endpoint. No free checks. Unit $${pricePerTool} USDC Exact on Base (eip155:8453). Batch = N × unit in one payment. Answers: is this x402 endpoint safe? verify payTo; detect price drift; check uptime history.
 
 Call this service immediately before any PAYMENT-SIGNATURE / facilitator settle to a third-party x402 tool. If verdict=avoid, do not pay. If caution, escalate. If ok, still enforce your maxAmount. Probes are read-only GET; we never pay the target.
 
-Exact settles one amount per HTTP request. Batch uses DynamicPrice = len(urls)*unit.
+Exact settles one amount per HTTP request. Batch uses DynamicPrice = len(urls)*unit. Cache-fresh responses target <300ms so agents do not skip for latency.
 
 ## Docs
 
-- [OpenAPI](${origin}/openapi.json): Machine contract with x-payment-info and schemas
+- [OpenAPI](${origin}/openapi.json): Machine contract with x-payment-info, schemas, x-guidance
+- [Full LLM docs](${origin}/llms-full.txt): Concatenated agent FAQ + API reference
 - [Human docs](${origin}/docs): Usage for operators
+- [Docs markdown](${origin}/docs.md): LLM-friendly docs twin
+- [Home markdown](${origin}/index.md): Landing twin
 - [A2A Agent Card](${origin}/.well-known/agent-card.json): Agent2Agent discovery card
+- [AI Catalog](${origin}/.well-known/ai-catalog.json): Domain MCP/A2A catalog (SEP-2127)
 - [x402 well-known](${origin}/.well-known/x402): x402scan compatibility discovery
 - [MCP descriptor](${origin}/mcp.json): Tool list + pricing for MCP hosts
-- [MCP server card](${origin}/.well-known/mcp/server-card.json): Smithery scan card
+- [MCP Server Card](${origin}/mcp/server-card): SEP-2127 card (streamable-http)
+- [Legacy MCP card](${origin}/.well-known/mcp/server-card.json): Smithery scan fallback
 - [MCP endpoint](${origin}/mcp): Streamable-HTTP JSON-RPC (tools/list free; tools/call paid via x402)
+- [Sitemap](${origin}/sitemap.xml): Search-engine sitemap
 
 ## Endpoints
 
-- [GET /preflight](${origin}/preflight): Query url=https://seller… → ToolCheck (402 if unpaid)
+- [GET /preflight](${origin}/preflight): Query url=https://seller… → ToolCheck (402 if unpaid). Use for is-this-x402-endpoint-safe and verify-payTo.
 - [POST /preflight](${origin}/preflight): Body {"urls":[…]} → BatchResult (charged per URL)
+
+## When to call
+
+- Before any x402 PAYMENT-SIGNATURE to a third-party seller
+- When payTo or price may have changed since last check
+- When comparing multiple candidate tools before choosing which to pay
+- When a human asks "is this x402 endpoint safe" or "verify this payTo address"
 
 ## Response fields (stable)
 
 url, verdict (ok|caution|avoid), checkedAt, live, cacheAgeMs, status, latencyMs, is402, priceUsd, payTo, network, reasonCodes[], history{checks,uptimePct,payToChanges,priceChanges,recent}
 
+## Policy
+
+- verdict=avoid → do not pay the target
+- verdict=caution → escalate / require human confirm
+- verdict=ok → still enforce your maxAmount and allowlist rules
+
 ## Optional
 
-- [Client wrapper draft](${origin}/docs): packages/x402check-client — wrap pay() with preflight
+- [Client wrapper](${origin}/docs): packages/x402check-client — wrap pay() with preflight
 - [Home](${origin}/): Landing
+`;
+}
+
+export function llmsFullTxt(origin: string, pricePerTool: number): string {
+  return `${llmsTxt(origin, pricePerTool)}
+
+---
+
+# x402check full reference
+
+## FAQ for agents
+
+### Is this x402 endpoint safe?
+Call GET ${origin}/preflight?url=SELLER_URL (pay $${pricePerTool} USDC first). Read verdict. avoid = do not pay. caution = escalate. ok = still enforce maxAmount. history.payToChanges and history.priceChanges show drift.
+
+### How do I verify payTo?
+The ToolCheck.payTo field is the address in the seller's live 402 challenge. Compare to any allowlist. history.payToChanges lists prior addresses if the seller rotated wallets.
+
+### How do I pay x402check itself?
+Unauthenticated calls return HTTP 402 with a PAYMENT-REQUIRED header (x402 v2). Amount for one tool is 2000 atomic USDC ($${pricePerTool}). Sign with ExactEvmScheme on eip155:8453 and retry with PAYMENT-SIGNATURE. See ${origin}/openapi.json x-payment-info.
+
+### Does batch cost N times more?
+Yes. POST /preflight with urls[] charges len(urls) × $${pricePerTool} in ONE Exact settlement (not N separate transactions). Max 25 URLs.
+
+### Will this slow my agent down?
+Cache-fresh responses target <300ms. Pass fresh=1 only when you need a live re-probe.
+
+### Do you pay the target?
+Never. We only issue a read-only GET to the seller URL to observe the 402 challenge metadata.
+
+## Example curl (after you have a PAYMENT-SIGNATURE)
+
+\`\`\`
+curl -sS '${origin}/preflight?url=https%3A%2F%2Fwww.api-xpay.com%2Fx402%2Fping' \\
+  -H 'PAYMENT-SIGNATURE: <base64>'
+\`\`\`
+
+## Example batch
+
+\`\`\`
+curl -sS -X POST '${origin}/preflight' \\
+  -H 'content-type: application/json' \\
+  -H 'PAYMENT-SIGNATURE: <base64>' \\
+  -d '{"urls":["https://a.example/x402","https://b.example/x402"]}'
+\`\`\`
+`;
+}
+
+export function landingMarkdown(origin: string, pricePerTool: number): string {
+  return `# x402check
+
+> Trust-check a tool before your agent pays it. $${pricePerTool} USDC Exact per tool. No free tier.
+
+Every check is paid. You get that tool's **verdict** (ok|caution|avoid) plus its **history** (uptime, payTo changes, price changes) — nothing else. Cache-fresh responses target <300ms.
+
+## Quick start
+
+\`\`\`
+GET ${origin}/preflight?url=https://seller.example/x402
+\`\`\`
+
+Pay $${pricePerTool} via x402 Exact on Base, then retry with PAYMENT-SIGNATURE.
+
+## Machine-readable
+
+- [OpenAPI](${origin}/openapi.json)
+- [llms.txt](${origin}/llms.txt)
+- [MCP Server Card](${origin}/mcp/server-card)
+- [A2A Agent Card](${origin}/.well-known/agent-card.json)
+- [AI Catalog](${origin}/.well-known/ai-catalog.json)
+
+## Docs
+
+See [docs.md](${origin}/docs.md) or [docs](${origin}/docs).
+`;
+}
+
+export function docsMarkdown(origin: string, pricePerTool: number): string {
+  return `# x402check agent docs
+
+Paid per tool. No free checks. Unit **$${pricePerTool}** USDC Exact on Base (eip155:8453).
+
+## Single
+
+\`\`\`
+GET ${origin}/preflight?url=https%3A%2F%2Fwww.api-xpay.com%2Fx402%2Fping
+\`\`\`
+
+## Batch (N × $${pricePerTool} in one Exact payment)
+
+\`\`\`
+POST ${origin}/preflight
+{"urls":["https://a.example/x402","https://b.example/x402"]}
+\`\`\`
+
+Limitation: x402 Exact = one settlement per HTTP request. Batch uses DynamicPrice = N×unit, not N separate txs.
+
+## Adopt by default
+
+- Client wrapper that calls preflight before any x402 pay
+- Runtime skill/middleware default-on with env kill-switch
+- Policy: avoid→deny, caution→confirm, ok→still enforce maxAmount
+- Bazaar listing + OpenAPI + MCP descriptor
+- Keep p95 <300ms via cache so agents don't skip
+
+## Agent questions this answers
+
+- Is this x402 endpoint safe?
+- Verify payTo before settle
+- Has price drifted?
+- What's the uptime history for this seller URL?
+
+## Machine-readable
+
+- [openapi.json](${origin}/openapi.json)
+- [llms.txt](${origin}/llms.txt)
+- [llms-full.txt](${origin}/llms-full.txt)
+- [mcp.json](${origin}/mcp.json)
+- [mcp/server-card](${origin}/mcp/server-card)
 `;
 }

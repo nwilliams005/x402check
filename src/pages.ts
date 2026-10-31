@@ -11,17 +11,127 @@ h1 span{color:#7dd3a7}.lede{color:#9fb3c8;max-width:38rem}.eyebrow{text-transfor
 .card{background:#0e1520;border:1px solid #1e2a3a;border-radius:12px;padding:1rem}.card h3{margin:.2rem 0 .4rem;font-size:1rem}
 .card p{margin:0;color:#9fb3c8;font-size:.9rem}.fine{color:#7a8ea3;font-size:.85rem}.foot{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:2rem 1.25rem;border-top:1px solid #1a2433;color:#7a8ea3;font-size:.85rem}
 .foot a{color:#7dd3a7}code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}pre{background:#0e1520;border:1px solid #1e2a3a;padding:1rem;border-radius:8px;overflow:auto}
-.docs{padding:2rem 1.25rem 4rem}h2{margin-top:2rem}`;
+.docs{padding:2rem 1.25rem 4rem}h2{margin-top:2rem}.faq details{background:#0e1520;border:1px solid #1e2a3a;border-radius:10px;padding:.75rem 1rem;margin:.6rem 0}
+.faq summary{cursor:pointer;font-weight:600}.faq p{color:#9fb3c8;margin:.5rem 0 0}`;
+
+function headTags(opts: {
+  origin: string;
+  title: string;
+  description: string;
+  path: string;
+  jsonLd?: object;
+}): string {
+  const canonical = `${opts.origin}${opts.path}`;
+  const mdPath = opts.path === "/" ? "/index.md" : `${opts.path}.md`;
+  const jsonLd = opts.jsonLd
+    ? `\n  <script type="application/ld+json">${JSON.stringify(opts.jsonLd)}</script>`
+    : "";
+  return `  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>${opts.title}</title>
+  <meta name="description" content="${opts.description}" />
+  <link rel="canonical" href="${canonical}" />
+  <link rel="icon" href="/assets/icon.svg" type="image/svg+xml" />
+  <link rel="alternate" type="text/markdown" href="${opts.origin}${mdPath}" />
+  <link rel="describedby" href="${opts.origin}/llms.txt" />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="x402check" />
+  <meta property="og:title" content="${opts.title}" />
+  <meta property="og:description" content="${opts.description}" />
+  <meta property="og:url" content="${canonical}" />
+  <meta property="og:image" content="${opts.origin}/assets/icon.svg" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="${opts.title}" />
+  <meta name="twitter:description" content="${opts.description}" />
+  <meta name="keywords" content="x402, x402check, verify payTo, is this x402 endpoint safe, agent trust, preflight, USDC, Base, MCP, AI agent tools" />
+  <link rel="stylesheet" href="/assets/style.css" />${jsonLd}`;
+}
+
+function softwareJsonLd(origin: string, pricePerTool: number) {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebAPI",
+        name: "x402check",
+        description:
+          "Paid per-tool trust check before an AI agent pays an x402 endpoint. Verify payTo, price drift, and uptime history.",
+        url: origin,
+        documentation: `${origin}/docs`,
+        termsOfService: `${origin}/docs`,
+        provider: {
+          "@type": "Organization",
+          name: "x402check",
+          url: origin,
+        },
+        offers: {
+          "@type": "Offer",
+          price: String(pricePerTool),
+          priceCurrency: "USD",
+          description: "Per tool checked via x402 Exact USDC on Base",
+        },
+      },
+      {
+        "@type": "SoftwareApplication",
+        name: "x402check",
+        applicationCategory: "DeveloperApplication",
+        operatingSystem: "Any",
+        url: origin,
+        description:
+          "x402 trust preflight for AI agents. Answers: is this x402 endpoint safe? verify payTo.",
+        offers: {
+          "@type": "Offer",
+          price: String(pricePerTool),
+          priceCurrency: "USD",
+        },
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: [
+          {
+            "@type": "Question",
+            name: "Is this x402 endpoint safe?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: `Call GET ${origin}/preflight?url=SELLER (pay $${pricePerTool} USDC). verdict=avoid means do not pay; caution means escalate; ok still requires your maxAmount check.`,
+            },
+          },
+          {
+            "@type": "Question",
+            name: "How do I verify payTo on an x402 tool?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "ToolCheck.payTo is the address from the seller's live 402 challenge. history.payToChanges shows wallet rotations.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "How much does x402check cost?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: `$${pricePerTool} USDC Exact per tool on Base (eip155:8453). Batch = N × unit in one settlement. No free tier.`,
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
 
 export function landingHtml(origin: string, pricePerTool: number): string {
+  const description =
+    "Agents pay per tool checked. Compact verdict + history before any x402 payment. Verify payTo, detect price drift, answer is this x402 endpoint safe.";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>x402check — pay-per-tool trust check</title>
-  <meta name="description" content="Agents pay per tool checked. Compact verdict + history before any x402 payment." />
-  <link rel="stylesheet" href="/assets/style.css" />
+${headTags({
+  origin,
+  title: "x402check — pay-per-tool trust check for AI agents",
+  description,
+  path: "/",
+  jsonLd: softwareJsonLd(origin, pricePerTool),
+})}
 </head>
 <body>
   <div class="bg"></div>
@@ -40,7 +150,8 @@ export function landingHtml(origin: string, pricePerTool: number): string {
     <p class="lede">
       Every check is paid. You get that tool’s <strong>verdict</strong> plus its
       <strong>history</strong> (uptime, payTo changes, price changes) — nothing else.
-      Cache-fresh responses target &lt;300&nbsp;ms.
+      Cache-fresh responses target &lt;300&nbsp;ms. Built so agents asking
+      <em>“is this x402 endpoint safe?”</em> or <em>“verify payTo”</em> get a clear answer.
     </p>
     <div class="cta-row">
       <a class="btn primary" href="/docs">Docs for agents</a>
@@ -50,12 +161,27 @@ export function landingHtml(origin: string, pricePerTool: number): string {
       <article class="card"><h3>Per-tool Exact</h3><p>DynamicPrice scales with batch size. One settlement per HTTP request.</p></article>
       <article class="card"><h3>Compact JSON</h3><p>Stable fields: verdict, payTo, priceUsd, reasonCodes, history.</p></article>
       <article class="card"><h3>History that matters</h3><p>Past checks, uptime %, payTo drift, price moves — for that URL only.</p></article>
-      <article class="card"><h3>Discoverable</h3><p>OpenAPI, llms.txt, MCP descriptor, Bazaar discovery extension.</p></article>
+      <article class="card"><h3>Discoverable</h3><p>OpenAPI, llms.txt, MCP Server Card, AI Catalog, A2A, Bazaar.</p></article>
     </section>
-    <p class="fine">Not tied to contractor brands. Prefer a dedicated agent domain (see brand research). We never pay the target.</p>
+    <section class="faq">
+      <h2>Questions agents ask</h2>
+      <details open>
+        <summary>Is this x402 endpoint safe?</summary>
+        <p>Call <code>GET /preflight?url=…</code>. <strong>avoid</strong> → do not pay. <strong>caution</strong> → escalate. <strong>ok</strong> → still enforce your maxAmount.</p>
+      </details>
+      <details>
+        <summary>How do I verify payTo?</summary>
+        <p>Read <code>payTo</code> from the ToolCheck. Compare to your allowlist. <code>history.payToChanges</code> shows prior wallets if the seller rotated.</p>
+      </details>
+      <details>
+        <summary>How do I pay for a check?</summary>
+        <p>Unauthenticated calls return HTTP 402. Decode <code>PAYMENT-REQUIRED</code>, sign Exact USDC on Base, retry with <code>PAYMENT-SIGNATURE</code>. See <a href="/openapi.json">OpenAPI</a>.</p>
+      </details>
+    </section>
+    <p class="fine">We never pay the target. Agents-first brand. Markdown twin: <a href="/index.md">/index.md</a>.</p>
   </main>
   <footer class="wrap foot">
-    <span>x402 Exact · USDC · agents first</span>
+    <span>x402 Exact · USDC · Base · agents first</span>
     <a href="/docs">Integration →</a>
   </footer>
 </body>
@@ -63,13 +189,18 @@ export function landingHtml(origin: string, pricePerTool: number): string {
 }
 
 export function docsHtml(origin: string, pricePerTool: number): string {
+  const description =
+    "Agent docs for x402check: pay-per-tool trust preflight, verify payTo, batch pricing, OpenAPI and MCP discovery.";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Docs — x402check</title>
-  <link rel="stylesheet" href="/assets/style.css" />
+${headTags({
+  origin,
+  title: "Docs — x402check agent trust preflight",
+  description,
+  path: "/docs",
+  jsonLd: softwareJsonLd(origin, pricePerTool),
+})}
 </head>
 <body>
   <div class="bg"></div>
@@ -84,7 +215,7 @@ export function docsHtml(origin: string, pricePerTool: number): string {
   </header>
   <main class="wrap docs">
     <h1>Agent docs</h1>
-    <p class="lede">Paid per tool. No free checks. Recommended unit <strong>$${pricePerTool}</strong> (Bazaar micro-utils often $0.001–$0.005).</p>
+    <p class="lede">Paid per tool. No free checks. Recommended unit <strong>$${pricePerTool}</strong> (Bazaar micro-utils often $0.001–$0.005). Use before any x402 settle when you need to know <em>is this x402 endpoint safe</em> or to <em>verify payTo</em>.</p>
     <h2>Single</h2>
     <pre>GET ${origin}/preflight?url=https%3A%2F%2Fwww.api-xpay.com%2Fx402%2Fping</pre>
     <h2>Batch (N × $${pricePerTool} in one Exact payment)</h2>
@@ -96,11 +227,19 @@ export function docsHtml(origin: string, pricePerTool: number): string {
       <li>Client wrapper that calls preflight before any x402 pay.</li>
       <li>Runtime skill/middleware default-on with env kill-switch.</li>
       <li>Policy: avoid→deny, caution→confirm, ok→still enforce maxAmount.</li>
-      <li>Bazaar listing + OpenAPI + MCP descriptor (shipped).</li>
+      <li>Bazaar listing + OpenAPI + MCP Server Card + AI Catalog (shipped).</li>
       <li>Keep p95 &lt;300ms via cache so agents don’t skip.</li>
     </ul>
     <h2>Machine-readable</h2>
-    <p><a href="/openapi.json">openapi.json</a> · <a href="/llms.txt">llms.txt</a> · <a href="/mcp.json">mcp.json</a></p>
+    <p>
+      <a href="/openapi.json">openapi.json</a> ·
+      <a href="/llms.txt">llms.txt</a> ·
+      <a href="/llms-full.txt">llms-full.txt</a> ·
+      <a href="/mcp.json">mcp.json</a> ·
+      <a href="/mcp/server-card">mcp/server-card</a> ·
+      <a href="/.well-known/ai-catalog.json">ai-catalog</a> ·
+      <a href="/docs.md">docs.md</a>
+    </p>
   </main>
 </body>
 </html>`;

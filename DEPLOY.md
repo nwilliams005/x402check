@@ -2,15 +2,16 @@
 
 Production Worker `x402check` on zone `x402check.dev` (CF account `3d713278ffd837b2b46e92d76e30ed24`).
 
+**Do not deploy without Nicklaus's explicit approval.**
+
 ```bash
 cd /workspace/x402-preflight
 export WRANGLER_CACHE_DIR=/tmp/wcache
 export CLOUDFLARE_ACCOUNT_ID=3d713278ffd837b2b46e92d76e30ed24
-# CLOUDFLARE_API_TOKEN, CDP_API_KEY_ID, CDP_API_KEY_SECRET in env
-npx wrangler kv namespace create PAYTO_HISTORY   # paste id into wrangler.toml
-printf '%s' "$CDP_API_KEY_ID" | npx wrangler secret put CDP_API_KEY_ID
-printf '%s' "$CDP_API_KEY_SECRET" | npx wrangler secret put CDP_API_KEY_SECRET
-npx wrangler deploy
+# CLOUDFLARE_API_TOKEN must already be in env (never print). CDP secrets already on the Worker.
+npx wrangler deploy --config wrangler.toml
 ```
+
+After deploy, run the IndexNow + Google sitemap pings in `DISCOVERY.md` (account-free).
 
 Local testnet: `npm run test:local` (wrangler.dev.toml).

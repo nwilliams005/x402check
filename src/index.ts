@@ -18,12 +18,24 @@ import {
   unitPriceUsd,
 } from "./sell";
 import { docsHtml, landingHtml, styleCss } from "./pages";
-import { llmsTxt, mcpDescriptor, openApiSpec } from "./openapi";
 import {
+  docsMarkdown,
+  landingMarkdown,
+  llmsFullTxt,
+  llmsTxt,
+  mcpDescriptor,
+  openApiSpec,
+} from "./openapi";
+import {
+  INDEXNOW_KEY,
   agentCard,
   agentJson,
-  mcpServerCard,
+  aiCatalog,
+  mcpServerCardLegacy,
+  mcpServerCardSep,
+  paymentRequiredBody,
   robotsTxt,
+  sitemapXml,
   x402WellKnown,
 } from "./discovery";
 import { handleMcp } from "./mcp";
@@ -31,10 +43,31 @@ import { handleMcp } from "./mcp";
 const DEFAULT_PAY_TO =
   "0xd98451514c7510e3fCd0463De973B9a6bB89A86f" as `0x${string}`;
 
+const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="x402check">
+  <rect width="128" height="128" rx="28" fill="#070b12"/>
+  <rect x="10" y="10" width="108" height="108" rx="22" fill="#0e1520" stroke="#1e2a3a" stroke-width="4"/>
+  <path d="M36 66l18 18 38-42" fill="none" stroke="#7dd3a7" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+
 const app = new Hono<{ Bindings: Env }>();
 
 function unit(env: Env) {
   return unitPriceUsd(env.PRICE_PER_TOOL_USD || env.PRICE?.replace("$", ""));
+}
+
+function originOf(c: { req: { url: string } }) {
+  return new URL(c.req.url).origin;
+}
+
+function cacheJson(
+  c: { json: (body: unknown, status?: number, headers?: Record<string, string>) => Response },
+  body: unknown,
+  maxAge = 300,
+) {
+  return c.json(body, 200, {
+    "Cache-Control": `public, max-age=${maxAge}`,
+    "Access-Control-Allow-Origin": "*",
+  });
 }
 
 app.get("/assets/style.css", (c) =>
@@ -44,44 +77,126 @@ app.get("/assets/style.css", (c) =>
   }),
 );
 
-app.get("/", (c) => c.html(landingHtml(new URL(c.req.url).origin, unit(c.env))));
-app.get("/docs", (c) => c.html(docsHtml(new URL(c.req.url).origin, unit(c.env))));
-app.get("/llms.txt", (c) =>
-  c.text(llmsTxt(new URL(c.req.url).origin, unit(c.env)), 200, {
-    "Content-Type": "text/plain; charset=utf-8",
+app.get("/assets/icon.svg", (c) =>
+  c.body(ICON_SVG, 200, {
+    "Content-Type": "image/svg+xml; charset=utf-8",
+    "Cache-Control": "public, max-age=86400",
+    "Access-Control-Allow-Origin": "*",
   }),
 );
-app.get("/openapi.json", (c) =>
-  c.json(openApiSpec(new URL(c.req.url).origin, unit(c.env))),
-);
-app.get("/mcp.json", (c) =>
-  c.json(mcpDescriptor(new URL(c.req.url).origin, unit(c.env))),
-);
-app.get("/robots.txt", (c) =>
-  c.text(robotsTxt(new URL(c.req.url).origin), 200, {
-    "Content-Type": "text/plain; charset=utf-8",
-  }),
-);
-app.get("/.well-known/agent-card.json", (c) =>
-  c.json(agentCard(new URL(c.req.url).origin, unit(c.env)), 200, {
+
+app.get("/", (c) => {
+  const origin = originOf(c);
+  const html = landingHtml(origin, unit(c.env));
+  return c.html(html, 200, {
+    Link: `<${origin}/llms.txt>; rel="describedby", <${origin}/index.md>; rel="alternate"; type="text/markdown"`,
+  });
+});
+
+app.get("/docs", (c) => {
+  const origin = originOf(c);
+  return c.html(docsHtml(origin, unit(c.env)), 200, {
+    Link: `<${origin}/llms.txt>; rel="describedby", <${origin}/docs.md>; rel="alternate"; type="text/markdown"`,
+  });
+});
+
+app.get("/index.md", (c) =>
+  c.text(landingMarkdown(originOf(c), unit(c.env)), 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
     "Cache-Control": "public, max-age=300",
   }),
+);
+
+app.get("/docs.md", (c) =>
+  c.text(docsMarkdown(originOf(c), unit(c.env)), 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    "Cache-Control": "public, max-age=300",
+  }),
+);
+
+app.get("/llms.txt", (c) =>
+  c.text(llmsTxt(originOf(c), unit(c.env)), 200, {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "public, max-age=300",
+  }),
+);
+
+app.get("/llms-full.txt", (c) =>
+  c.text(llmsFullTxt(originOf(c), unit(c.env)), 200, {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "public, max-age=300",
+  }),
+);
+
+app.get("/openapi.json", (c) =>
+  c.json(openApiSpec(originOf(c), unit(c.env)), 200, {
+    "Cache-Control": "public, max-age=300",
+    "Access-Control-Allow-Origin": "*",
+  }),
+);
+
+app.get("/mcp.json", (c) =>
+  c.json(mcpDescriptor(originOf(c), unit(c.env)), 200, {
+    "Cache-Control": "public, max-age=300",
+    "Access-Control-Allow-Origin": "*",
+  }),
+);
+
+app.get("/robots.txt", (c) =>
+  c.text(robotsTxt(originOf(c)), 200, {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "public, max-age=3600",
+  }),
+);
+
+app.get("/sitemap.xml", (c) => {
+  const lastmod = new Date().toISOString().slice(0, 10);
+  return c.body(sitemapXml(originOf(c), lastmod), 200, {
+    "Content-Type": "application/xml; charset=utf-8",
+    "Cache-Control": "public, max-age=3600",
+  });
+});
+
+app.get(`/${INDEXNOW_KEY}.txt`, (c) =>
+  c.text(INDEXNOW_KEY, 200, {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "public, max-age=86400",
+  }),
+);
+
+app.get("/.well-known/agent-card.json", (c) =>
+  cacheJson(c, agentCard(originOf(c), unit(c.env))),
 );
 app.get("/.well-known/agent.json", (c) =>
-  c.json(agentJson(new URL(c.req.url).origin, unit(c.env)), 200, {
-    "Cache-Control": "public, max-age=300",
-  }),
+  cacheJson(c, agentJson(originOf(c), unit(c.env))),
 );
 app.get("/.well-known/x402", (c) =>
-  c.json(x402WellKnown(new URL(c.req.url).origin, unit(c.env)), 200, {
-    "Cache-Control": "public, max-age=300",
-  }),
+  cacheJson(c, x402WellKnown(originOf(c), unit(c.env))),
 );
 app.get("/.well-known/mcp/server-card.json", (c) =>
-  c.json(mcpServerCard(new URL(c.req.url).origin, unit(c.env)), 200, {
+  cacheJson(c, mcpServerCardLegacy(originOf(c), unit(c.env))),
+);
+app.get("/.well-known/ai-catalog.json", (c) =>
+  c.json(aiCatalog(originOf(c)), 200, {
+    "Content-Type": "application/ai-catalog+json",
     "Cache-Control": "public, max-age=300",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET",
+    "Access-Control-Allow-Headers": "Content-Type, If-None-Match, Accept",
   }),
 );
+
+app.get("/mcp/server-card", (c) =>
+  c.json(mcpServerCardSep(originOf(c), unit(c.env)), 200, {
+    "Content-Type": "application/mcp-server-card+json",
+    "Cache-Control": "public, max-age=3600",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET",
+    "Access-Control-Allow-Headers": "Content-Type, If-None-Match, Accept",
+    "Access-Control-Expose-Headers": "ETag",
+  }),
+);
+
 app.all("/mcp", (c) => handleMcp(c));
 
 async function maybeBypass(c: {
@@ -94,14 +209,15 @@ async function maybeBypass(c: {
   );
 }
 
-function paymentRoutes(env: Env, payTo: `0x${string}`, network: `${string}:${string}`) {
+function paymentRoutes(env: Env, payTo: `0x${string}`, network: `${string}:${string}`, origin: string) {
   const u = unit(env);
   const priceFn = async (ctx: HTTPRequestContext) =>
     dynamicPriceForRequest(ctx, u);
 
   // serviceName ≤32 printable ASCII (bazaar resource metadata rules)
   const serviceName = (env.SERVICE_NAME || "x402check").slice(0, 32);
-  const tags = ["x402", "trust", "preflight", "agent-safety", "payTo-drift"];
+  const tags = ["x402", "trust", "preflight", "agent-safety", "verify-payTo"];
+  const iconUrl = `${origin}/assets/icon.svg`;
 
   const accepts = {
     scheme: "exact",
@@ -129,14 +245,14 @@ function paymentRoutes(env: Env, payTo: `0x${string}`, network: `${string}:${str
 
   // Separate GET vs POST bazaar declarations (do NOT set discoverable:true — invalid).
   // https://github.com/x402-foundation/x402/blob/main/specs/extensions/bazaar.md
-  // https://docs.cdp.coinbase.com/x402/seller/get-discovered
   return {
     "GET /preflight": {
       description:
-        "Before paying any x402 tool: trust-check one seller URL. Returns ok|caution|avoid + that tool's history only. No free tier.",
+        "Before paying any x402 tool: trust-check one seller URL. Answers is-this-x402-endpoint-safe / verify-payTo. Returns ok|caution|avoid + that tool's history only. No free tier.",
       mimeType: "application/json",
       serviceName,
       tags,
+      iconUrl,
       extensions: {
         ...declareDiscoveryExtension({
           input: { url: "https://www.api-xpay.com/x402/ping" },
@@ -164,6 +280,7 @@ function paymentRoutes(env: Env, payTo: `0x${string}`, network: `${string}:${str
       mimeType: "application/json",
       serviceName,
       tags,
+      iconUrl,
       extensions: {
         ...declareDiscoveryExtension({
           input: { urls: ["https://www.api-xpay.com/x402/ping"] },
@@ -206,6 +323,7 @@ app.use("/preflight", async (c, next) => {
   const network = (c.env.NETWORK || "eip155:8453") as `${string}:${string}`;
   const facilitatorUrl =
     c.env.FACILITATOR_URL || "https://api.cdp.coinbase.com/platform/v2/x402";
+  const origin = originOf(c);
 
   const facilitatorClient = createFacilitatorClient(facilitatorUrl, {
     CDP_API_KEY_ID: c.env.CDP_API_KEY_ID,
@@ -218,13 +336,27 @@ app.use("/preflight", async (c, next) => {
   await server.initialize();
 
   const mw = paymentMiddleware(
-    paymentRoutes(c.env, payTo, network),
+    paymentRoutes(c.env, payTo, network, origin),
     server,
     undefined,
     undefined,
     false,
   );
-  return mw(c, next);
+  const out = await mw(c, next);
+
+  // Enrich bare 402 JSON bodies so agents know exactly how to pay.
+  // Keep PAYMENT-REQUIRED / other headers from the middleware.
+  const res = out instanceof Response ? out : c.res;
+  if (res && res.status === 402) {
+    const headers = new Headers(res.headers);
+    headers.set("Content-Type", "application/json");
+    headers.set("Cache-Control", "no-store");
+    return new Response(JSON.stringify(paymentRequiredBody(origin, unit(c.env))), {
+      status: 402,
+      headers,
+    });
+  }
+  return out;
 });
 
 app.get("/preflight", async (c) => {
@@ -333,5 +465,8 @@ app.notFound((c) => {
   }
   return c.json({ error: "not_found" }, 404);
 });
+
+// silence unused import when DEFAULT_PRICE is only used via sell.ts defaults
+void DEFAULT_PRICE_PER_TOOL_USD;
 
 export default app;
