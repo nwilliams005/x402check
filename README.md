@@ -16,7 +16,7 @@ Batch POST = N×unit in one Exact settlement.
 | `/.well-known/x402` | x402scan compatibility |
 | `/.well-known/mcp/server-card.json` | Smithery server card |
 
-Draft packages (unpublished): `packages/x402check-client`, `packages/x402check-mcp`.
+npm packages: `x402check-client`, `x402check-mcp` (see `packages/`). Publish needs npm 2FA/granular token.
 
 See `DISCOVERY.md`, `GO_LIVE.md`, `DEPLOY.md`.
 

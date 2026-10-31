@@ -1,15 +1,34 @@
 {
-  "name": "@x402check/client",
+  "name": "x402check-client",
   "version": "0.1.0",
-  "private": true,
-  "description": "Call x402check before any x402 payment. Draft — not published.",
+  "description": "Call x402check before any x402 payment \u2014 trust-check seller URLs (ok|caution|avoid) with payTo and history.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js"
   },
-  "files": ["src", "README.md"],
-  "keywords": ["x402", "preflight", "agent", "trust", "mcp"],
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "x402",
+    "mcp",
+    "ai-agent",
+    "trust",
+    "preflight",
+    "payto",
+    "base",
+    "usdc"
+  ],
+  "homepage": "https://x402check.dev",
+  "bugs": {
+    "url": "https://x402check.dev/docs"
+  },
+  "author": "x402check",
   "license": "MIT",
-  "engines": { "node": ">=18" }
+  "engines": {
+    "node": ">=18"
+  }
 }

@@ -1,4 +1,4 @@
-# Draft for Smithery publish — do not submit until HTTPS origin is live.
+# Smithery — remote Streamable HTTP origin
 startCommand:
   type: http
   configSchema:

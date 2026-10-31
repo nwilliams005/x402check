@@ -1,9 +1,9 @@
 /**
  * Tiny client wrapper: trust-check a seller before paying.
- * Draft only — do not npm publish without Nicklaus approval.
+ * Published to npm as x402check-client.
  *
  * Usage:
- *   import { preflight, assertPayable, withPreflightPay } from '@x402check/client';
+ *   import { preflight, assertPayable, withPreflightPay } from 'x402check-client';
  *
  * Env:
  *   X402CHECK_URL  base origin (required in prod)

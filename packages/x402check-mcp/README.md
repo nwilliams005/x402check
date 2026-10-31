@@ -1,9 +1,37 @@
-# @x402check/mcp (draft)
+# x402check-mcp
 
-Stdio bridge + `server.json` for the official MCP Registry / Smithery / Glama / mcp.so.
+MCP stdio bridge to the remote [x402check](https://x402check.dev) HTTP/MCP endpoint. Trust-check x402 seller URLs before paying.
+
+Official MCP Registry name: `dev.x402check/mcp`
+
+## Install
 
 ```bash
-X402CHECK_URL=https://x402check.dev node src/stdio.js
+npm install -g x402check-mcp
 ```
 
-Do not publish or submit listings without Nicklaus approval.
+## Run
+
+```bash
+X402CHECK_URL=https://x402check.dev x402check-mcp
+```
+
+Or in an MCP host config:
+
+```json
+{
+  "mcpServers": {
+    "x402check": {
+      "command": "npx",
+      "args": ["-y", "x402check-mcp"],
+      "env": {
+        "X402CHECK_URL": "https://x402check.dev"
+      }
+    }
+  }
+}
+```
+
+Remote Streamable HTTP (no local bridge): `https://x402check.dev/mcp`
+
+Paid per tool checked via x402 Exact USDC on Base. See https://x402check.dev/llms.txt

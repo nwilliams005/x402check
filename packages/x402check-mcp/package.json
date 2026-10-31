@@ -1,10 +1,38 @@
 {
-  "name": "@x402check/mcp",
+  "name": "x402check-mcp",
   "version": "0.1.0",
-  "private": true,
-  "description": "MCP stdio bridge to remote x402check HTTP. Draft — not published.",
+  "description": "MCP stdio bridge to x402check \u2014 trust-check x402 seller URLs before paying (ok|caution|avoid).",
   "type": "module",
-  "bin": { "x402check-mcp": "./src/stdio.js" },
-  "files": ["src", "server.json", "README.md", "smithery.yaml", "glama.json"],
-  "license": "MIT"
+  "main": "./src/stdio.js",
+  "bin": {
+    "x402check-mcp": "./src/stdio.js"
+  },
+  "files": [
+    "src",
+    "server.json",
+    "README.md",
+    "LICENSE",
+    "smithery.yaml",
+    "glama.json"
+  ],
+  "keywords": [
+    "x402",
+    "mcp",
+    "ai-agent",
+    "trust",
+    "preflight",
+    "payto",
+    "base",
+    "usdc"
+  ],
+  "homepage": "https://x402check.dev",
+  "bugs": {
+    "url": "https://x402check.dev/docs"
+  },
+  "author": "x402check",
+  "license": "MIT",
+  "mcpName": "dev.x402check/mcp",
+  "engines": {
+    "node": ">=18"
+  }
 }

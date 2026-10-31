@@ -459,9 +459,16 @@ url, verdict (ok|caution|avoid), checkedAt, live, cacheAgeMs, status, latencyMs,
 - verdict=caution → escalate / require human confirm
 - verdict=ok → still enforce your maxAmount and allowlist rules
 
+## Install
+
+- \`npm install x402check-client\` then \`import { preflight, assertPayable, withPreflightPay } from 'x402check-client'\` with env \`X402CHECK_URL=https://x402check.dev\`
+- \`npm install -g x402check-mcp\` then \`X402CHECK_URL=https://x402check.dev x402check-mcp\` (MCP Registry name \`dev.x402check/mcp\`)
+- Remote MCP (no local bridge): \`${origin}/mcp\` streamable-http
+
 ## Optional
 
-- [Client wrapper](${origin}/docs): packages/x402check-client — wrap pay() with preflight
+- [Client wrapper](${origin}/docs): npm \`x402check-client\` — wrap pay() with preflight
+- [MCP bridge](${origin}/docs): npm \`x402check-mcp\` — stdio → remote /mcp
 - [Home](${origin}/): Landing
 `;
 }

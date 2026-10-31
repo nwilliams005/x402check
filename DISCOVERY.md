@@ -85,11 +85,11 @@ Do **not** register or publish without his approval. DNS TXT for MCP Registry is
 | 402 Index | https://402index.io/ · POST `/api/v1/register` | Account or API body `{url,name,protocol}` |
 | x402dash | https://x402dash.com/submit/ | Form / POST https://api.x402dash.com/v1/register |
 | x402 List | https://www.x402-list.com/ | Free submit from own domain |
-| MCP Registry | https://modelcontextprotocol.io/registry/about | `mcp-publisher`; DNS TXT on `x402check.dev`; `server.json` name `dev.x402check/mcp` |
+| MCP Registry | https://modelcontextprotocol.io/registry/about | `mcp-publisher` installed; needs apex TXT on `x402check.dev` (`v=MCPv1; k=ed25519; p=…` — key at /workspace/.mcp-registry). CLOUDFLARE_API_TOKEN lacks DNS scope (403). Publish after npm package is live. |
 | Smithery | https://smithery.ai/docs/build/publish | Account; Streamable HTTP `https://x402check.dev/mcp` |
 | Glama | https://glama.ai/mcp | Account / GitHub; submit server |
 | mcp.so | https://mcp.so/ | Account; submit listing |
-| npm packages | https://www.npmjs.com/ | Account `x402check-dev` already created; publish `x402check-client` + `x402check-mcp` after approve |
+| npm packages | https://www.npmjs.com/ | Account `x402check-dev` ready; publish blocked until granular token with bypass-2fa (classic login token cannot publish). Packages prepared as unscoped `x402check-client` / `x402check-mcp` (@x402check/* taken by unrelated x402check.xyz). |
 
 ## After-deploy checklist (account-free — run then)
 

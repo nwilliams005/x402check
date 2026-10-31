@@ -146,7 +146,7 @@ export async function handleMcp(c: Context<{ Bindings: Env }>) {
               text: JSON.stringify({
                 error: "payment_required",
                 message:
-                  "Pay via x402 Exact on HTTP GET/POST /preflight (PAYMENT-SIGNATURE), or use @scope/x402check-client. MCP tools/call does not settle payment itself.",
+                  "Pay via x402 Exact on HTTP GET/POST /preflight (PAYMENT-SIGNATURE), or use x402check-client. MCP tools/call does not settle payment itself.",
                 http: {
                   get: "/preflight?url=",
                   post: "/preflight",
