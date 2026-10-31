@@ -216,7 +216,18 @@ function paymentRoutes(env: Env, payTo: `0x${string}`, network: `${string}:${str
 
   // serviceName ≤32 printable ASCII (bazaar resource metadata rules)
   const serviceName = (env.SERVICE_NAME || "x402check").slice(0, 32);
-  const tags = ["x402", "trust", "preflight", "agent-safety", "verify-payTo"];
+  const tags = [
+    "x402",
+    "trust",
+    "preflight",
+    "agent-safety",
+    "verify-payTo",
+    "uptime",
+    "price-history",
+    "endpoint-health",
+    "compare-tools",
+    "budget-guard",
+  ];
   const iconUrl = `${origin}/assets/icon.svg`;
 
   const accepts = {
@@ -248,7 +259,7 @@ function paymentRoutes(env: Env, payTo: `0x${string}`, network: `${string}:${str
   return {
     "GET /preflight": {
       description:
-        "Before paying any x402 tool: trust-check one seller URL. Answers is-this-x402-endpoint-safe / verify-payTo. Returns ok|caution|avoid + that tool's history only. No free tier.",
+        "Before paying any x402 tool: trust-check one seller URL. Use for is-this-endpoint-safe, verify-payTo, uptime, price/wallet drift, budget guard, validate 402, debug failing settle. Returns ok|caution|avoid + that tool's history only. No free tier. Endpoint+history — not wallet OFAC/simulation.",
       mimeType: "application/json",
       serviceName,
       tags,
@@ -276,7 +287,7 @@ function paymentRoutes(env: Env, payTo: `0x${string}`, network: `${string}:${str
     },
     "POST /preflight": {
       description:
-        `Before paying: batch trust-check up to ${MAX_BATCH} seller URLs. Charge $${u} × len(urls) in one Exact settlement. Returns each tool's verdict + history.`,
+        `Before paying: compare/batch trust-check up to ${MAX_BATCH} seller URLs (cheapest, most reliable, screen Bazaar hits). Charge $${u} × len(urls) in one Exact settlement. Returns each tool's verdict + history.`,
       mimeType: "application/json",
       serviceName,
       tags,

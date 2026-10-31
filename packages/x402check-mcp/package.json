@@ -1,7 +1,7 @@
 {
   "name": "x402check-mcp",
-  "version": "0.1.0",
-  "description": "MCP stdio bridge to x402check \u2014 trust-check x402 seller URLs before paying (ok|caution|avoid).",
+  "version": "0.1.1",
+  "description": "MCP stdio bridge to x402check \u2014 preflight_check, verify_payto, compare_tools before paying (ok|caution|avoid + history).",
   "type": "module",
   "main": "./src/stdio.js",
   "bin": {
@@ -23,7 +23,13 @@
     "preflight",
     "payto",
     "base",
-    "usdc"
+    "usdc",
+    "scam-check",
+    "uptime",
+    "budget-guard",
+    "compare-tools",
+    "verify-payto",
+    "x402check"
   ],
   "homepage": "https://x402check.dev",
   "bugs": {

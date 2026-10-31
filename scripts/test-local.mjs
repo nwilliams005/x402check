@@ -144,6 +144,23 @@ async function main() {
       });
     }
 
+    // llms.txt must cover when-to-use intents
+    {
+      const r = await fetch(`${BASE}/llms.txt`);
+      const text = await r.text();
+      results.push({
+        test: "llms.txt when-to-use",
+        status: r.status,
+        ok:
+          r.status === 200 &&
+          /when to use x402check/i.test(text) &&
+          /verify payTo/i.test(text) &&
+          text.includes("Budget guard") &&
+          text.includes("verify_payto") &&
+          text.includes("compare_tools"),
+      });
+    }
+
     // OpenAPI must advertise x-guidance + x-payment-info for x402scan
     {
       const r = await fetch(`${BASE}/openapi.json`);
@@ -256,7 +273,9 @@ async function main() {
         ok:
           r.status === 200 &&
           names.includes("preflight_check") &&
-          names.includes("preflight_batch"),
+          names.includes("preflight_batch") &&
+          names.includes("verify_payto") &&
+          names.includes("compare_tools"),
         tools: names,
       });
     }

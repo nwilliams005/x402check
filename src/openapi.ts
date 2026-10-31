@@ -27,14 +27,17 @@ export function openApiSpec(origin: string, pricePerTool: number) {
     openapi: "3.1.0",
     info: {
       title: "x402check",
-      version: "0.2.1",
-      summary: "Paid per-tool trust check before an agent pays an x402 endpoint",
+      version: "0.2.2",
+      summary:
+        "Paid per-tool x402 trust preflight — verdict + history before an agent pays",
       description:
         "Call BEFORE any x402 payment to a third-party tool. Every check is paid " +
         `($${unit}/tool). GET checks one URL; POST batches up to 25 (N×unit in one Exact settlement). ` +
         "Response: compact verdict (ok|caution|avoid) + that tool's history only (checks, uptime, payTo/price changes). " +
-        "Answers agent questions: is this x402 endpoint safe? verify payTo; detect price drift; check uptime before settle. " +
-        "If verdict=avoid do not pay. Cached history targets <300ms; live probe when stale.",
+        "Use for: is this x402 endpoint safe/legit; verify payTo before signing USDC; detect wallet or price drift; " +
+        "uptime / is-it-down; compare sellers; budget guard; validate payment requirements; debug a failing 402; " +
+        "audit log of why you paid or refused. Probes are read-only — we never pay the target. " +
+        "Endpoint+history product (not wallet OFAC/drainer/simulation). If verdict=avoid do not pay. Cache-fresh targets <300ms.",
       contact: {
         name: "x402check",
         email: "hustlelab@mail.grokbot.com",
@@ -43,8 +46,10 @@ export function openApiSpec(origin: string, pricePerTool: number) {
       "x-guidance":
         "Always call GET /preflight?url=SELLER_URL (or POST batch) before PAYMENT-SIGNATURE to that seller. " +
         "Deny payment when verdict=avoid; escalate when caution; still enforce your maxAmount when ok. " +
-        `Unit price $${unit} USDC Exact on Base (eip155:8453). ` +
-        "Use when: is this x402 endpoint safe, verify payTo, check price history, compare sellers before paying. " +
+        `Unit price $${unit} USDC Exact on Base (eip155:8453), billed per tool URL. No free tier. ` +
+        "Use when: is this x402 endpoint safe; verify payTo; detect rug-style payTo/price swaps; check uptime; " +
+        "compare/cheapest/most reliable among candidates; budget guard; validate 402 requirements; debug failing settle; " +
+        "compliance/audit trail before signing. MCP aliases: verify_payto, compare_tools. " +
         `Discovery: ${origin}/llms.txt ${origin}/.well-known/agent-card.json ${origin}/.well-known/ai-catalog.json ${origin}/mcp/server-card ${origin}/openapi.json`,
       "x-x402": {
         scheme: "exact",
@@ -72,8 +77,9 @@ export function openApiSpec(origin: string, pricePerTool: number) {
           tags: ["preflight"],
           summary: "Trust-check one x402 seller URL before paying it",
           description:
-            "WHEN TO USE: immediately before settling payment to any x402 tool you have not verified this session, " +
-            "or when payTo/price may have drifted. Also when asking 'is this x402 endpoint safe' or 'verify payTo'. " +
+            "WHEN TO USE: immediately before settling payment to any x402 tool; when asking is this endpoint safe/legit; " +
+            "verify payTo / receiving wallet; detect price or wallet drift; check uptime / is it down; validate payment " +
+            "requirements before signing USDC on Base; budget guard; debug a failing 402; compliance log before pay. " +
             "Returns only that tool's verdict + history. Do not pay the target if verdict is avoid. " +
             "Probe is a read-only GET to the target (we never pay it).",
           security: [{ x402Payment: [] }],
@@ -137,9 +143,10 @@ export function openApiSpec(origin: string, pricePerTool: number) {
         post: {
           operationId: "preflightBatch",
           tags: ["preflight"],
-          summary: "Batch trust-check; charged per URL",
+          summary: "Batch / compare trust-check; charged per URL",
           description:
-            "WHEN TO USE: compare multiple candidate x402 tools before choosing which to pay. " +
+            "WHEN TO USE: compare multiple candidate x402 tools; pick cheapest or most reliable; screen Bazaar search hits " +
+            "before paying any of them. " +
             `Charge = len(urls) × $${unit} in ONE Exact settlement (not N separate txs). Max 25.`,
           security: [{ x402Payment: [] }],
           requestBody: {
@@ -345,9 +352,9 @@ export function openApiSpec(origin: string, pricePerTool: number) {
 export function mcpDescriptor(origin: string, pricePerTool: number) {
   return {
     name: "x402check",
-    version: "0.2.1",
+    version: "0.2.2",
     description:
-      "Before any x402 payment: trust-check the seller URL. Returns ok|caution|avoid + that tool's history. Paid per tool. Use for is-this-x402-endpoint-safe and verify-payTo.",
+      "Before any x402 payment: trust-check the seller URL. Returns ok|caution|avoid + history (uptime, payTo/price changes). Paid per tool. Use for safety, verify-payTo, compare tools, uptime, budget guard, debug 402.",
     transport: { type: "streamable-http", url: `${origin}/mcp` },
     serverCard: `${origin}/mcp/server-card`,
     legacyServerCard: `${origin}/.well-known/mcp/server-card.json`,
@@ -363,7 +370,7 @@ export function mcpDescriptor(origin: string, pricePerTool: number) {
       {
         name: "preflight_check",
         description:
-          "Trust-check one x402 seller URL before paying it. Call when about to settle, or when asking is this x402 endpoint safe / verify payTo. Deny pay if verdict=avoid.",
+          "Trust-check one x402 seller URL before paying it. Call when about to settle, asking is this endpoint safe/legit, checking uptime, validating 402 requirements, or debugging a failed settle. Deny pay if verdict=avoid.",
         inputSchema: {
           type: "object",
           required: ["url"],
@@ -373,7 +380,27 @@ export function mcpDescriptor(origin: string, pricePerTool: number) {
           },
         },
         annotations: {
-          title: "x402 preflight check",
+          title: "x402 endpoint trust preflight",
+          readOnlyHint: true,
+          openWorldHint: true,
+          destructiveHint: false,
+        },
+        endpoint: { method: "GET", path: "/preflight", query: ["url", "fresh"] },
+      },
+      {
+        name: "verify_payto",
+        description:
+          "Verify payTo / receiving wallet from the seller's live 402 + history.payToChanges. Use before signing USDC on Base.",
+        inputSchema: {
+          type: "object",
+          required: ["url"],
+          properties: {
+            url: { type: "string" },
+            fresh: { type: "boolean" },
+          },
+        },
+        annotations: {
+          title: "Verify x402 payTo",
           readOnlyHint: true,
           openWorldHint: true,
           destructiveHint: false,
@@ -382,7 +409,8 @@ export function mcpDescriptor(origin: string, pricePerTool: number) {
       },
       {
         name: "preflight_batch",
-        description: "Trust-check multiple seller URLs; charged per URL. Use to compare candidates.",
+        description:
+          "Trust-check multiple seller URLs; charged per URL. Use to compare candidates or screen Bazaar hits.",
         inputSchema: {
           type: "object",
           required: ["urls"],
@@ -392,7 +420,27 @@ export function mcpDescriptor(origin: string, pricePerTool: number) {
           },
         },
         annotations: {
-          title: "x402 preflight batch",
+          title: "Batch x402 trust preflight",
+          readOnlyHint: true,
+          openWorldHint: true,
+          destructiveHint: false,
+        },
+        endpoint: { method: "POST", path: "/preflight" },
+      },
+      {
+        name: "compare_tools",
+        description:
+          "Compare x402 sellers (verdict, price, payTo, uptime, drift). Alias of preflight_batch; charged per URL.",
+        inputSchema: {
+          type: "object",
+          required: ["urls"],
+          properties: {
+            urls: { type: "array", items: { type: "string" }, maxItems: 25 },
+            fresh: { type: "boolean" },
+          },
+        },
+        annotations: {
+          title: "Compare x402 tools",
           readOnlyHint: true,
           openWorldHint: true,
           destructiveHint: false,
@@ -415,16 +463,29 @@ export function mcpDescriptor(origin: string, pricePerTool: number) {
 export function llmsTxt(origin: string, pricePerTool: number): string {
   return `# x402check
 
-> Paid per-tool trust check before an AI agent pays an x402 endpoint. No free checks. Unit $${pricePerTool} USDC Exact on Base (eip155:8453). Batch = N × unit in one payment. Answers: is this x402 endpoint safe? verify payTo; detect price drift; check uptime history.
+> Paid per-tool trust preflight before an AI agent pays an x402 endpoint. No free checks. Unit $${pricePerTool} USDC Exact on Base (eip155:8453). Batch = N × unit in one payment.
 
-Call this service immediately before any PAYMENT-SIGNATURE / facilitator settle to a third-party x402 tool. If verdict=avoid, do not pay. If caution, escalate. If ok, still enforce your maxAmount. Probes are read-only GET; we never pay the target.
+Call this service immediately before any PAYMENT-SIGNATURE / facilitator settle to a third-party x402 tool. If verdict=avoid, do not pay. If caution, escalate. If ok, still enforce your maxAmount. Probes are read-only GET; we never pay the target. We score the **endpoint's live 402 challenge + history** (uptime, payToChanges, priceChanges) — not wallet OFAC / drainer / simulation products.
 
 Exact settles one amount per HTTP request. Batch uses DynamicPrice = len(urls)*unit. Cache-fresh responses target <300ms so agents do not skip for latency.
+
+## When to use x402check
+
+- Before paying any x402 endpoint / before PAYMENT-SIGNATURE
+- When a human or agent asks: is this x402 endpoint safe? is this API legit or a scam?
+- Verify payTo / receiving wallet before signing a USDC transfer on Base
+- Detect payTo rotation or sudden price hikes (rug-style seller changes)
+- Check uptime / is the endpoint down / unreachable before you pay
+- Compare several tools: cheapest, most reliable, or screen Bazaar search hits
+- Budget guard / spending safety for autonomous micropayments
+- Validate payment requirements (accepts[], network, amount) before signing
+- Debug a failing 402 or malformed PAYMENT-REQUIRED
+- Compliance / audit log: evidence for why you paid or refused
 
 ## Docs
 
 - [OpenAPI](${origin}/openapi.json): Machine contract with x-payment-info, schemas, x-guidance
-- [Full LLM docs](${origin}/llms-full.txt): Concatenated agent FAQ + API reference
+- [Full LLM docs](${origin}/llms-full.txt): Concatenated FAQ + API reference
 - [Human docs](${origin}/docs): Usage for operators
 - [Docs markdown](${origin}/docs.md): LLM-friendly docs twin
 - [Home markdown](${origin}/index.md): Landing twin
@@ -435,19 +496,20 @@ Exact settles one amount per HTTP request. Batch uses DynamicPrice = len(urls)*u
 - [MCP Server Card](${origin}/mcp/server-card): SEP-2127 card (streamable-http)
 - [Legacy MCP card](${origin}/.well-known/mcp/server-card.json): Smithery scan fallback
 - [MCP endpoint](${origin}/mcp): Streamable-HTTP JSON-RPC (tools/list free; tools/call paid via x402)
+- [Intent map](${origin}/docs): See site docs / INTENTS.md in repo for full prompt coverage
 - [Sitemap](${origin}/sitemap.xml): Search-engine sitemap
 
 ## Endpoints
 
-- [GET /preflight](${origin}/preflight): Query url=https://seller… → ToolCheck (402 if unpaid). Use for is-this-x402-endpoint-safe and verify-payTo.
+- [GET /preflight](${origin}/preflight): Query url=https://seller… → ToolCheck (402 if unpaid)
 - [POST /preflight](${origin}/preflight): Body {"urls":[…]} → BatchResult (charged per URL)
 
-## When to call
+## MCP tools
 
-- Before any x402 PAYMENT-SIGNATURE to a third-party seller
-- When payTo or price may have changed since last check
-- When comparing multiple candidate tools before choosing which to pay
-- When a human asks "is this x402 endpoint safe" or "verify this payTo address"
+- \`preflight_check\` — single URL trust preflight
+- \`verify_payto\` — same billing; focused on receiving wallet + payToChanges
+- \`preflight_batch\` — up to 25 URLs
+- \`compare_tools\` — same billing as batch; compare candidates
 
 ## Response fields (stable)
 
@@ -480,25 +542,49 @@ export function llmsFullTxt(origin: string, pricePerTool: number): string {
 
 # x402check full reference
 
-## FAQ for agents
+## FAQ for agents and people
 
 ### Is this x402 endpoint safe?
-Call GET ${origin}/preflight?url=SELLER_URL (pay $${pricePerTool} USDC first). Read verdict. avoid = do not pay. caution = escalate. ok = still enforce maxAmount. history.payToChanges and history.priceChanges show drift.
+Call GET ${origin}/preflight?url=SELLER_URL (pay $${pricePerTool} USDC first). Read verdict. avoid = do not pay. caution = escalate. ok = still enforce maxAmount. history.payToChanges and history.priceChanges show drift. This is an endpoint+history check, not a warranty and not an OFAC/drainer scan of a wallet.
 
-### How do I verify payTo?
-The ToolCheck.payTo field is the address in the seller's live 402 challenge. Compare to any allowlist. history.payToChanges lists prior addresses if the seller rotated wallets.
+### Is this API legit or a scam / rug?
+We do not label "scam" as a legal finding. We surface reachability, whether a real 402 challenge exists, current payTo/price, and whether payTo or price changed over prior checks — signals agents use before paying. Treat avoid as deny; investigate caution.
+
+### How do I verify payTo before signing USDC on Base?
+ToolCheck.payTo is the address in the seller's live 402 challenge. Compare to any allowlist. history.payToChanges lists prior addresses if the seller rotated wallets. MCP alias: verify_payto.
+
+### How do I detect price changes or a rug-style swap?
+Inspect history.priceChanges and history.payToChanges on the ToolCheck. A sudden new payTo or large price jump is a caution/avoid signal depending on other reasons.
+
+### Is the endpoint down? What's the uptime?
+history.uptimePct, lastOkAt, lastFailAt, and live/status/latencyMs answer reachability. Prefer a fresh=1 probe if the agent already failed once.
+
+### Which tool should I pay among several?
+POST /preflight with urls[] (or MCP compare_tools). Compare verdict, priceUsd, uptimePct, and drift. Charge = N × $${pricePerTool} in one Exact settlement.
+
+### Budget guard / spending safety?
+Call preflight before every settle; deny on avoid; still enforce your own maxAmount on ok. Unit $${pricePerTool} keeps the check itself a micro-cost.
+
+### Debug a failing 402 / validate payment requirements
+A successful ToolCheck with is402=true returns parsed priceUsd, payTo, network, and reasonCodes from the live challenge — useful when facilitator settles fail or accepts[] look wrong.
+
+### Compliance / audit logging
+Persist the ToolCheck JSON (verdict, payTo, priceUsd, reasonCodes, history, checkedAt) alongside your payment decision. That is evidence you checked before signing.
 
 ### How do I pay x402check itself?
 Unauthenticated calls return HTTP 402 with a PAYMENT-REQUIRED header (x402 v2). Amount for one tool is 2000 atomic USDC ($${pricePerTool}). Sign with ExactEvmScheme on eip155:8453 and retry with PAYMENT-SIGNATURE. See ${origin}/openapi.json x-payment-info.
 
 ### Does batch cost N times more?
-Yes. POST /preflight with urls[] charges len(urls) × $${pricePerTool} in ONE Exact settlement (not N separate transactions). Max 25 URLs.
+Yes. POST /preflight with urls[] charges len(urls) × $${pricePerTool} in ONE Exact settlement (not N separate transactions). Max 25 URLs. No free tier.
 
 ### Will this slow my agent down?
 Cache-fresh responses target <300ms. Pass fresh=1 only when you need a live re-probe.
 
 ### Do you pay the target?
 Never. We only issue a read-only GET to the seller URL to observe the 402 challenge metadata.
+
+### How is this different from x402check.xyz?
+Different product. x402check.dev checks the **seller endpoint** (live 402 + history). Wallet OFAC/phishing/drainer/simulation screening is out of scope here.
 
 ## Example curl (after you have a PAYMENT-SIGNATURE)
 
@@ -523,7 +609,7 @@ export function landingMarkdown(origin: string, pricePerTool: number): string {
 
 > Trust-check a tool before your agent pays it. $${pricePerTool} USDC Exact per tool. No free tier.
 
-Every check is paid. You get that tool's **verdict** (ok|caution|avoid) plus its **history** (uptime, payTo changes, price changes) — nothing else. Cache-fresh responses target <300ms.
+Every check is paid. You get that tool's **verdict** (ok|caution|avoid) plus its **history** (uptime, payTo changes, price changes) — nothing else. Use before PAYMENT-SIGNATURE, to verify payTo, detect drift, compare sellers, or as a budget guard. Cache-fresh responses target <300ms.
 
 ## Quick start
 
@@ -569,18 +655,25 @@ Limitation: x402 Exact = one settlement per HTTP request. Batch uses DynamicPric
 
 ## Adopt by default
 
-- Client wrapper that calls preflight before any x402 pay
+- Client wrapper that calls preflight before any x402 pay (\`x402check-client\`)
 - Runtime skill/middleware default-on with env kill-switch
 - Policy: avoid→deny, caution→confirm, ok→still enforce maxAmount
 - Bazaar listing + OpenAPI + MCP descriptor
 - Keep p95 <300ms via cache so agents don't skip
 
-## Agent questions this answers
+## When to use (prompt coverage)
 
-- Is this x402 endpoint safe?
-- Verify payTo before settle
-- Has price drifted?
-- What's the uptime history for this seller URL?
+- Before paying any x402 endpoint / before signing USDC on Base
+- Is this x402 endpoint safe / legit / a scam?
+- Verify payTo; detect payTo or price changes
+- Uptime / is the endpoint down
+- Compare tools; pick cheapest or most reliable
+- Budget guard; audit log of payment decisions
+- Validate 402 payment requirements; debug failing settles
+
+## MCP tools
+
+preflight_check · verify_payto · preflight_batch · compare_tools (aliases share per-URL billing)
 
 ## Machine-readable
 

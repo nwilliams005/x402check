@@ -1,8 +1,20 @@
 # x402check-client
 
-Call [x402check](https://x402check.dev) before any x402 payment so agents default to safe pays.
+Call [x402check](https://x402check.dev) **before any x402 payment** so agents default to safe pays.
 
-Returns `ok` | `caution` | `avoid` plus `payTo`, price, and history for one seller URL (or a batch).
+Returns `ok` | `caution` | `avoid` plus `payTo`, `priceUsd`, and **history** (uptime, payToChanges, priceChanges) for one seller URL — or a batch when you need to compare tools.
+
+Use it when you need to:
+
+- gate every settle / `PAYMENT-SIGNATURE`
+- answer “is this x402 endpoint safe?”
+- verify payTo before signing USDC on Base
+- detect price or wallet drift
+- check uptime / whether a seller is down
+- compare candidates (cheapest / most reliable)
+- keep a budget guard or audit trail
+
+Not a wallet OFAC/drainer/simulation product — this checks the **endpoint’s live 402 + history**.
 
 ## Install
 
@@ -38,4 +50,4 @@ await pay('https://seller.example/api');
 - `assertPayable(check, { allowCaution? })`
 - `withPreflightPay(payFn, opts?)` — wrap a pay function so preflight runs first
 
-Paid per tool checked via x402 Exact USDC on Base. See https://x402check.dev/llms.txt
+Paid **per tool checked** via x402 Exact USDC on Base. No free tier. See https://x402check.dev/llms.txt
