@@ -1,15 +1,17 @@
 /**
  * x402 Tool Trust Preflight — paid per-tool checks (no free tier for probes).
- * Production: Base mainnet + CDP. Dev: wrangler.dev.toml Sepolia.
+ * Production: Base + Solana mainnet USDC via CDP. Dev: wrangler.dev.toml Sepolia (+ Solana Devnet).
  * Do not deploy without Nicklaus's explicit approval.
  */
 import { Hono } from "hono";
 import { paymentMiddleware, x402ResourceServer } from "@x402/hono";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
+import { ExactSvmScheme } from "@x402/svm/exact/server";
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import type { HTTPRequestContext } from "@x402/core/server";
 import type { Env, ToolCheck } from "./types";
 import { createFacilitatorClient } from "./facilitator";
+import { buildAccepts, resolvePayConfig } from "./payconfig";
 import { checkTool, isBlockedHost } from "./preflight";
 import {
   DEFAULT_PRICE_PER_TOOL_USD,
@@ -40,9 +42,6 @@ import {
   x402WellKnown,
 } from "./discovery";
 import { handleMcp } from "./mcp";
-
-const DEFAULT_PAY_TO =
-  "0xd98451514c7510e3fCd0463De973B9a6bB89A86f" as `0x${string}`;
 
 const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="x402check">
   <rect width="128" height="128" rx="28" fill="#070b12"/>
@@ -266,10 +265,12 @@ async function maybeBypass(c: {
   );
 }
 
-function paymentRoutes(env: Env, payTo: `0x${string}`, network: `${string}:${string}`, origin: string) {
+function paymentRoutes(env: Env, origin: string) {
   const u = unit(env);
   const priceFn = async (ctx: HTTPRequestContext) =>
     dynamicPriceForRequest(ctx, u);
+  const pay = resolvePayConfig(env);
+  const accepts = buildAccepts(pay, priceFn, u);
 
   // serviceName ≤32 printable ASCII (bazaar resource metadata rules)
   const serviceName = (env.SERVICE_NAME || "x402check").slice(0, 32);
@@ -284,22 +285,10 @@ function paymentRoutes(env: Env, payTo: `0x${string}`, network: `${string}:${str
     "endpoint-health",
     "compare-tools",
     "budget-guard",
+    "base",
+    "solana",
   ];
   const iconUrl = `${origin}/assets/icon.svg`;
-
-  const accepts = {
-    scheme: "exact",
-    price: priceFn,
-    network,
-    payTo,
-    maxTimeoutSeconds: 60,
-    extra: {
-      pricePerToolUsd: u,
-      pricingModel: "per_tool",
-      batchNote:
-        "POST body urls[] → DynamicPrice = N×unit in ONE Exact settlement (not N separate txs).",
-    },
-  };
 
   const outputExample = {
     url: "https://www.api-xpay.com/x402/ping",
@@ -340,7 +329,7 @@ function paymentRoutes(env: Env, payTo: `0x${string}`, network: `${string}:${str
           output: { example: outputExample },
         }),
       },
-      accepts: [accepts],
+      accepts,
     },
     "POST /preflight": {
       description:
@@ -376,7 +365,7 @@ function paymentRoutes(env: Env, payTo: `0x${string}`, network: `${string}:${str
           },
         }),
       },
-      accepts: [accepts],
+      accepts,
     },
   };
 }
@@ -387,24 +376,27 @@ app.use("/preflight", async (c, next) => {
     return next();
   }
 
-  const payTo = (c.env.PAY_TO || DEFAULT_PAY_TO) as `0x${string}`;
-  const network = (c.env.NETWORK || "eip155:8453") as `${string}:${string}`;
   const facilitatorUrl =
     c.env.FACILITATOR_URL || "https://api.cdp.coinbase.com/platform/v2/x402";
   const origin = originOf(c);
+  const pay = resolvePayConfig(c.env);
 
   const facilitatorClient = createFacilitatorClient(facilitatorUrl, {
     CDP_API_KEY_ID: c.env.CDP_API_KEY_ID,
     CDP_API_KEY_SECRET: c.env.CDP_API_KEY_SECRET,
   });
   const server = new x402ResourceServer(facilitatorClient).register(
-    network,
+    pay.evmNetwork,
     new ExactEvmScheme(),
   );
+  if (pay.solanaPayTo && pay.solanaNetwork) {
+    // feePayer comes from facilitator /supported via ExactSvmScheme.enhancePaymentRequirements
+    server.register(pay.solanaNetwork, new ExactSvmScheme());
+  }
   await server.initialize();
 
   const mw = paymentMiddleware(
-    paymentRoutes(c.env, payTo, network, origin),
+    paymentRoutes(c.env, origin),
     server,
     undefined,
     undefined,

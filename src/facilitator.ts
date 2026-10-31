@@ -4,7 +4,7 @@
  * - Coinbase CDP mainnet facilitator (JWT via CDP_API_KEY_ID / CDP_API_KEY_SECRET).
  *
  * Keys are never hardcoded: Worker secrets (c.env) first, then process.env.
- * Mirrors @coinbase/cdp-sdk createCdpFacilitatorClient without pulling broken SVM peers.
+ * Mirrors @coinbase/cdp-sdk createCdpFacilitatorClient (JWT auth for CDP verify/settle/supported).
  */
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { generateJwt } from "@coinbase/cdp-sdk/auth";

@@ -11,7 +11,17 @@ export function openApiSpec(origin: string, pricePerTool: number) {
   const amount = unit.toFixed(6);
   const paymentInfoFixed = {
     price: { mode: "fixed" as const, currency: "USD", amount },
-    protocols: [{ x402: { scheme: "exact", network: "eip155:8453", asset: "USDC" } }],
+    protocols: [
+      { x402: { scheme: "exact", network: "eip155:8453", asset: "USDC" } },
+      {
+        x402: {
+          scheme: "exact",
+          network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+          asset: "USDC",
+          assetMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        },
+      },
+    ],
   };
   const paymentInfoDynamic = {
     price: {
@@ -20,7 +30,17 @@ export function openApiSpec(origin: string, pricePerTool: number) {
       min: amount,
       max: (unit * 25).toFixed(6),
     },
-    protocols: [{ x402: { scheme: "exact", network: "eip155:8453", asset: "USDC" } }],
+    protocols: [
+      { x402: { scheme: "exact", network: "eip155:8453", asset: "USDC" } },
+      {
+        x402: {
+          scheme: "exact",
+          network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+          asset: "USDC",
+          assetMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        },
+      },
+    ],
   };
 
   return {
@@ -46,7 +66,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
       "x-guidance":
         "Always call GET /preflight?url=SELLER_URL (or POST batch) before PAYMENT-SIGNATURE to that seller. " +
         "Deny payment when verdict=avoid; escalate when caution; still enforce your maxAmount when ok. " +
-        `Unit price $${unit} USDC Exact on Base (eip155:8453), billed per tool URL. No free tier. ` +
+        `Unit price $${unit} USDC Exact on Base (eip155:8453) or Solana (solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp), billed per tool URL. No free tier. ` +
         "Use when: is this x402 endpoint safe; verify payTo; detect rug-style payTo/price swaps; check uptime; " +
         "compare/cheapest/most reliable among candidates; budget guard; validate 402 requirements; debug failing settle; " +
         "compliance/audit trail before signing. MCP aliases: verify_payto, compare_tools. " +
@@ -54,7 +74,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
       "x-x402": {
         scheme: "exact",
         pricePerToolUsd: unit,
-        networks: ["eip155:8453", "eip155:84532"],
+        networks: ["eip155:8453", "eip155:84532", "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp", "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"],
         asset: "USDC",
       },
       "x-discovery": {
@@ -79,7 +99,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
           description:
             "WHEN TO USE: immediately before settling payment to any x402 tool; when asking is this endpoint safe/legit; " +
             "verify payTo / receiving wallet; detect price or wallet drift; check uptime / is it down; validate payment " +
-            "requirements before signing USDC on Base; budget guard; debug a failing 402; compliance log before pay. " +
+            "requirements before signing USDC on Base or Solana; budget guard; debug a failing 402; compliance log before pay. " +
             "Returns only that tool's verdict + history. Do not pay the target if verdict is avoid. " +
             "Probe is a read-only GET to the target (we never pay it).",
           security: [{ x402Payment: [] }],
@@ -418,7 +438,7 @@ export function mcpDescriptor(origin: string, pricePerTool: number) {
       {
         name: "verify_payto",
         description:
-          "Verify payTo / receiving wallet from the seller's live 402 + history.payToChanges. Use before signing USDC on Base.",
+          "Verify payTo / receiving wallet from the seller's live 402 + history.payToChanges. Use before signing USDC on Base or Solana.",
         inputSchema: {
           type: "object",
           required: ["url"],
@@ -491,7 +511,7 @@ export function mcpDescriptor(origin: string, pricePerTool: number) {
 export function llmsTxt(origin: string, pricePerTool: number): string {
   return `# x402check
 
-> Paid per-tool trust preflight before an AI agent pays an x402 endpoint. No free checks. Unit $${pricePerTool} USDC Exact on Base (eip155:8453). Batch = N × unit in one payment.
+> Paid per-tool trust preflight before an AI agent pays an x402 endpoint. No free checks. Unit $${pricePerTool} USDC Exact on Base (eip155:8453) or Solana (solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp). Batch = N × unit in one payment.
 
 Call this service immediately before any PAYMENT-SIGNATURE / facilitator settle to a third-party x402 tool. If verdict=avoid, do not pay. If caution, escalate. If ok, still enforce your maxAmount. Probes are read-only GET; we never pay the target. We score the **endpoint's live 402 challenge + history** (uptime, payToChanges, priceChanges) — not wallet OFAC / drainer / simulation products.
 
@@ -501,7 +521,7 @@ Exact settles one amount per HTTP request. Batch uses DynamicPrice = len(urls)*u
 
 - Before paying any x402 endpoint / before PAYMENT-SIGNATURE
 - When a human or agent asks: is this x402 endpoint safe? is this API legit or a scam?
-- Verify payTo / receiving wallet before signing a USDC transfer on Base
+- Verify payTo / receiving wallet before signing a USDC transfer on Base or Solana
 - Detect payTo rotation or sudden price hikes (rug-style seller changes)
 - Check uptime / is the endpoint down / unreachable before you pay
 - Compare several tools: cheapest, most reliable, or screen Bazaar search hits
@@ -573,12 +593,12 @@ export function llmsFullTxt(origin: string, pricePerTool: number): string {
 ## FAQ for agents and people
 
 ### Is this x402 endpoint safe?
-Preview shape free: GET ${origin}/example. Then call GET ${origin}/preflight?url=SELLER_URL (pay $${pricePerTool} USDC Exact on Base / x402 v2 PAYMENT-SIGNATURE). Read verdict. avoid = do not pay. caution = escalate. ok = still enforce maxAmount. history.payToChanges and history.priceChanges show drift. This is an endpoint+history check, not a warranty and not an OFAC/drainer scan of a wallet.
+Preview shape free: GET ${origin}/example. Then call GET ${origin}/preflight?url=SELLER_URL (pay $${pricePerTool} USDC Exact on Base or Solana / x402 v2 PAYMENT-SIGNATURE). Read verdict. avoid = do not pay. caution = escalate. ok = still enforce maxAmount. history.payToChanges and history.priceChanges show drift. This is an endpoint+history check, not a warranty and not an OFAC/drainer scan of a wallet.
 
 ### Is this API legit or a scam / rug?
 We do not label "scam" as a legal finding. We surface reachability, whether a real 402 challenge exists, current payTo/price, and whether payTo or price changed over prior checks — signals agents use before paying. Treat avoid as deny; investigate caution.
 
-### How do I verify payTo before signing USDC on Base?
+### How do I verify payTo before signing USDC on Base or Solana?
 ToolCheck.payTo is the address in the seller's live 402 challenge. Compare to any allowlist. history.payToChanges lists prior addresses if the seller rotated wallets. MCP alias: verify_payto.
 
 ### How do I detect price changes or a rug-style swap?
@@ -600,7 +620,7 @@ A successful ToolCheck with is402=true returns parsed priceUsd, payTo, network, 
 Persist the ToolCheck JSON (verdict, payTo, priceUsd, reasonCodes, history, checkedAt) alongside your payment decision. That is evidence you checked before signing.
 
 ### How do I pay x402check itself?
-Unauthenticated calls return HTTP 402 with a PAYMENT-REQUIRED header (x402 v2). Amount for one tool is 2000 atomic USDC ($${pricePerTool}). Sign with ExactEvmScheme on eip155:8453 and retry with PAYMENT-SIGNATURE. See ${origin}/openapi.json x-payment-info.
+Unauthenticated calls return HTTP 402 with a PAYMENT-REQUIRED header (x402 v2). Amount for one tool is 2000 atomic USDC ($${pricePerTool}). Sign with ExactEvmScheme on eip155:8453 or ExactSvmScheme on solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp (accepts[] lists both; Solana includes feePayer). Retry with PAYMENT-SIGNATURE. See ${origin}/openapi.json x-payment-info.
 
 ### Does batch cost N times more?
 Yes. POST /preflight with urls[] charges len(urls) × $${pricePerTool} in ONE Exact settlement (not N separate transactions). Max 25 URLs. No free tier.
@@ -645,7 +665,7 @@ Every check is paid. You get that tool's **verdict** (ok|caution|avoid) plus its
 GET ${origin}/preflight?url=https://seller.example/x402
 \`\`\`
 
-Pay $${pricePerTool} via x402 Exact on Base, then retry with PAYMENT-SIGNATURE.
+Pay $${pricePerTool} via x402 Exact on Base or Solana, then retry with PAYMENT-SIGNATURE.
 
 ## Machine-readable
 
@@ -664,7 +684,7 @@ See [docs.md](${origin}/docs.md) or [docs](${origin}/docs).
 export function docsMarkdown(origin: string, pricePerTool: number): string {
   return `# x402check agent docs
 
-Paid per tool. No free checks. Unit **$${pricePerTool}** USDC Exact on Base (eip155:8453).
+Paid per tool. No free checks. Unit **$${pricePerTool}** USDC Exact on Base (eip155:8453) or Solana (solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp).
 
 ## Single
 
@@ -691,7 +711,7 @@ Limitation: x402 Exact = one settlement per HTTP request. Batch uses DynamicPric
 
 ## When to use (prompt coverage)
 
-- Before paying any x402 endpoint / before signing USDC on Base
+- Before paying any x402 endpoint / before signing USDC on Base or Solana
 - Is this x402 endpoint safe / legit / a scam?
 - Verify payTo; detect payTo or price changes
 - Uptime / is the endpoint down

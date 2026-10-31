@@ -44,7 +44,7 @@ function headTags(opts: {
   <meta name="twitter:card" content="summary" />
   <meta name="twitter:title" content="${opts.title}" />
   <meta name="twitter:description" content="${opts.description}" />
-  <meta name="keywords" content="x402, x402check, verify payTo, is this x402 endpoint safe, agent trust, preflight, USDC, Base, MCP, AI agent tools, uptime, price drift, budget guard, compare x402 tools" />
+  <meta name="keywords" content="x402, x402check, verify payTo, is this x402 endpoint safe, agent trust, preflight, USDC, Base, Solana, MCP, AI agent tools, uptime, price drift, budget guard, compare x402 tools" />
   <link rel="stylesheet" href="/assets/style.css" />${jsonLd}`;
 }
 
@@ -69,7 +69,7 @@ function softwareJsonLd(origin: string, pricePerTool: number) {
           "@type": "Offer",
           price: String(pricePerTool),
           priceCurrency: "USD",
-          description: "Per tool checked via x402 Exact USDC on Base",
+          description: "Per tool checked via x402 Exact USDC on Base or Solana",
         },
       },
       {
@@ -102,7 +102,7 @@ function softwareJsonLd(origin: string, pricePerTool: number) {
             name: "How do I verify payTo on an x402 tool?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: "ToolCheck.payTo is the address from the seller's live 402 challenge. history.payToChanges shows wallet rotations. Use before signing USDC on Base.",
+              text: "ToolCheck.payTo is the address from the seller's live 402 challenge. history.payToChanges shows wallet rotations. Use before signing USDC on Base or Solana.",
             },
           },
           {
@@ -134,7 +134,7 @@ function softwareJsonLd(origin: string, pricePerTool: number) {
             name: "How much does x402check cost?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: `$${pricePerTool} USDC Exact per tool on Base (eip155:8453). Batch = N × unit in one settlement. No free tier.`,
+              text: `$${pricePerTool} USDC Exact per tool on Base (eip155:8453) or Solana (solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp). Batch = N × unit in one settlement. No free tier.`,
             },
           },
         ],
@@ -176,7 +176,7 @@ ${headTags({
       <strong>history</strong> (uptime, payTo changes, price changes) — nothing else.
       Cache-fresh responses target &lt;300&nbsp;ms. Built for agents that need to know
       <em>is this x402 endpoint safe</em>, <em>verify payTo</em>, detect drift, compare sellers,
-      or keep a budget guard before signing USDC on Base.
+      or keep a budget guard before signing USDC on Base or Solana.
     </p>
     <div class="cta-row">
       <a class="btn primary" href="/docs">Docs for agents</a>
@@ -208,13 +208,13 @@ ${headTags({
       </details>
       <details>
         <summary>How do I pay for a check?</summary>
-        <p>Unauthenticated calls return HTTP 402. Decode <code>PAYMENT-REQUIRED</code>, sign Exact USDC on Base, retry with <code>PAYMENT-SIGNATURE</code>. See <a href="/openapi.json">OpenAPI</a>.</p>
+        <p>Unauthenticated calls return HTTP 402. Decode <code>PAYMENT-REQUIRED</code>, sign Exact USDC on Base or Solana (accepts[] lists both), retry with <code>PAYMENT-SIGNATURE</code>. See <a href="/openapi.json">OpenAPI</a>.</p>
       </details>
     </section>
     <p class="fine">We never pay the target. Agents-first brand. Markdown twin: <a href="/index.md">/index.md</a>.</p>
   </main>
   <footer class="wrap foot">
-    <span>x402 Exact · USDC · Base · agents first</span>
+    <span>x402 Exact · USDC · Base + Solana · agents first</span>
     <a href="/docs">Integration →</a>
   </footer>
 </body>

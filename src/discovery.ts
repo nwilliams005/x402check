@@ -50,7 +50,7 @@ export function agentCard(origin: string, pricePerTool: number) {
         id: "preflight_one",
         name: "Preflight one x402 tool",
         description:
-          "Trust-check one absolute https x402 seller URL before you pay it. Use for: is this endpoint safe/legit; verify payTo; detect price or wallet drift; check uptime; validate 402 payment requirements; budget guard before signing USDC on Base; debug a failing 402.",
+          "Trust-check one absolute https x402 seller URL before you pay it. Use for: is this endpoint safe/legit; verify payTo; detect price or wallet drift; check uptime; validate 402 payment requirements; budget guard before signing USDC on Base or Solana; debug a failing 402.",
         tags: [
           "x402",
           "trust",
@@ -77,7 +77,7 @@ export function agentCard(origin: string, pricePerTool: number) {
         name: "Verify x402 payTo",
         description:
           "Extract and verify the receiving wallet (payTo) from a seller's live 402 challenge, with history of wallet rotations. Use before signing a USDC transfer.",
-        tags: ["x402", "payTo", "verify", "wallet", "Base", "USDC"],
+        tags: ["x402", "payTo", "verify", "wallet", "Base", "Solana", "USDC"],
         examples: [
           "What payTo address does this x402 tool demand?",
           "Compare payTo to my allowlist before settle",
@@ -130,7 +130,7 @@ export function x402WellKnown(origin: string, pricePerTool: number) {
     openapi: `${origin}/openapi.json`,
     llms: `${origin}/llms.txt`,
     instructions:
-      `Always GET ${origin}/preflight?url=SELLER before PAYMENT-SIGNATURE to that seller. Deny when verdict=avoid. Unit $${pricePerTool} USDC Exact on Base (eip155:8453).`,
+      `Always GET ${origin}/preflight?url=SELLER before PAYMENT-SIGNATURE to that seller. Deny when verdict=avoid. Unit $${pricePerTool} USDC Exact on Base (eip155:8453) or Solana (solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp).`,
     resources: [`${origin}/preflight`],
     resourceDetails: [
       {
@@ -193,7 +193,7 @@ export function mcpServerCardLegacy(origin: string, pricePerTool: number) {
       {
         name: "verify_payto",
         description:
-          "Verify the payTo receiving wallet from a seller's live 402 challenge, with history of wallet rotations. Use before signing USDC on Base.",
+          "Verify the payTo receiving wallet from a seller's live 402 challenge, with history of wallet rotations. Use before signing USDC on Base or Solana.",
         inputSchema: {
           type: "object",
           required: ["url"],
@@ -439,9 +439,29 @@ export function paymentRequiredBody(origin: string, pricePerTool: number) {
   return {
     error: "payment_required",
     x402Version: 2,
-    message: `Payment required: $${pricePerTool} USDC Exact on Base (eip155:8453) per tool checked. This server speaks x402 v2 only. Decode PAYMENT-REQUIRED, sign accepts[0], retry with PAYMENT-SIGNATURE.`,
+    message: `Payment required: $${pricePerTool} USDC Exact per tool on Base (eip155:8453) or Solana (solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp). This server speaks x402 v2 only. Decode PAYMENT-REQUIRED, pick an accepts[] entry your wallet can settle, sign, retry with PAYMENT-SIGNATURE.`,
     howToPay: {
       scheme: "exact",
+      networks: [
+        {
+          network: "eip155:8453",
+          networkAliases: { v2: "eip155:8453", v1LegacyName: "base" },
+          asset: "USDC",
+          assetAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          chainFamily: "evm",
+          clientHint: "@x402/evm ExactEvmScheme on eip155:*",
+        },
+        {
+          network: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+          networkAliases: { v2: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp", v1LegacyName: "solana" },
+          asset: "USDC",
+          assetMint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+          chainFamily: "svm",
+          clientHint: "@x402/svm ExactSvmScheme on solana:* (needs feePayer from accepts[].extra)",
+          ataNote: "payTo is the owner pubkey; TransferChecked goes to its USDC ATA (must exist).",
+        },
+      ],
+      // Keep legacy single-network fields for older parsers (Base).
       network: "eip155:8453",
       networkAliases: { v2: "eip155:8453", v1LegacyName: "base" },
       asset: "USDC",
@@ -451,25 +471,28 @@ export function paymentRequiredBody(origin: string, pricePerTool: number) {
       paymentHeaderIn: "PAYMENT-SIGNATURE",
       challengeHeaderOut: "PAYMENT-REQUIRED",
       legacyNote:
-        "x402 v1 clients that only register ExactEvmClientV1 / network \"base\" fail here with \"No client registered for x402 version: 2\". Also register ExactEvmScheme for eip155:* (or eip155:8453). Do not send X-PAYMENT alone — this server reads PAYMENT-SIGNATURE.",
+        "x402 v1 clients that only register ExactEvmClientV1 / network \"base\" fail here with \"No client registered for x402 version: 2\". Register ExactEvmScheme for eip155:* and/or ExactSvmScheme for solana:*. Do not send X-PAYMENT alone — this server reads PAYMENT-SIGNATURE.",
       steps: [
-        "Decode the PAYMENT-REQUIRED response header (base64 JSON, x402Version:2, network eip155:8453).",
-        `Build a PAYMENT-SIGNATURE covering accepts[0] (amount is atomic USDC; $${pricePerTool} = \"${atomic}\").`,
+        "Decode the PAYMENT-REQUIRED response header (base64 JSON, x402Version:2).",
+        "Pick an accepts[] entry your wallet can settle (Base EVM USDC or Solana SPL USDC). Solana entries include extra.feePayer from the CDP facilitator.",
+        `Build a PAYMENT-SIGNATURE covering that accept (amount is atomic USDC; $${pricePerTool} = \"${atomic}\").`,
         "Retry the same request with header PAYMENT-SIGNATURE (not X-PAYMENT alone).",
-        "Recommended: npm i @x402/fetch @x402/evm — wrapFetchWithPayment + ExactEvmScheme on eip155:*.",
+        "EVM: npm i @x402/fetch @x402/evm — wrapFetchWithPayment + ExactEvmScheme on eip155:*.",
+        "Solana: npm i @x402/fetch @x402/svm — wrapFetchWithPayment + ExactSvmScheme on solana:*.",
         "MCP: tools/list is free; tools/call that hits /preflight still requires the same x402 payment on that HTTP hop.",
         `Preview a sample JSON shape for free at GET ${origin}/example (static, not a live check).`,
       ],
       compatibleClients: [
         "@x402/fetch + ExactEvmScheme",
-        "@x402/axios + ExactEvmScheme",
+        "@x402/fetch + ExactSvmScheme",
+        "@x402/axios + ExactEvmScheme / ExactSvmScheme",
         "Coinbase AgentKit x402 action provider (v2)",
         "Cloudflare Agents withX402Client",
         "x402check-client (npm)",
       ],
       needsWallet: true,
       walletHint:
-        "Caller needs a Base USDC-funded EVM wallet (or a custodial agent wallet that can sign Exact payments). No wallet → cannot settle.",
+        "Caller needs a Base USDC-funded EVM wallet and/or a Solana USDC-funded wallet (or a custodial agent wallet that can sign Exact payments). No wallet → cannot settle.",
       docs: `${origin}/docs`,
       openapi: `${origin}/openapi.json`,
       llms: `${origin}/llms.txt`,
