@@ -31,7 +31,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
     openapi: "3.1.0",
     info: {
       title: "x402check",
-      version: "0.2.2",
+      version: "0.2.3",
       summary:
         "Paid per-tool x402 trust preflight — verdict + history before an agent pays",
       description:
@@ -414,9 +414,11 @@ export function mcpDescriptor(origin: string, pricePerTool: number) {
     pricing: {
       model: "x402-exact",
       pricePerToolUsd: pricePerTool,
-      batch: "POST /preflight {urls[]} → one payment of N×unit",
+      batch: "MCP batch / POST /preflight {urls[]} → one Exact settlement of N×unit",
+      mcpTransport:
+        "Unpaid tools/call → PaymentRequired in structuredContent + content[0].text; retry with params._meta['x402/payment']; success → result._meta['x402/payment-response']. Spec: x402-foundation transports-v2/mcp.md",
       limitation:
-        "Exact scheme = one settlement per HTTP request; batch is summed DynamicPrice, not N separate txs.",
+        "Exact scheme = one settlement per request; batch is summed N×unit, not N separate txs.",
     },
     tools: [
       {
@@ -547,7 +549,7 @@ Exact settles one amount per HTTP request. Batch uses DynamicPrice = len(urls)*u
 - [MCP descriptor](${origin}/mcp.json): Tool list + pricing for MCP hosts
 - [MCP Server Card](${origin}/mcp/server-card): SEP-2127 card (streamable-http)
 - [Legacy MCP card](${origin}/.well-known/mcp/server-card.json): Smithery scan fallback
-- [MCP endpoint](${origin}/mcp): Streamable-HTTP JSON-RPC (tools/list free; tools/call paid via x402)
+- [MCP endpoint](${origin}/mcp): Streamable-HTTP JSON-RPC (tools/list free; paid tools/call settle x402 Exact via \`_meta['x402/payment']\` per transports-v2/mcp.md)
 - [Intent map](${origin}/docs): See site docs / INTENTS.md in repo for full prompt coverage
 - [Sitemap](${origin}/sitemap.xml): Search-engine sitemap
 
@@ -557,6 +559,14 @@ Exact settles one amount per HTTP request. Batch uses DynamicPrice = len(urls)*u
 - [POST /preflight](${origin}/preflight): Body {"urls":[…]} → BatchResult (charged per URL)
 
 ## MCP tools
+
+Paid tools settle on the MCP call itself (not a separate HTTP hop):
+
+1. Unpaid \`tools/call\` → \`isError: true\` + \`PaymentRequired\` in \`structuredContent\` and \`content[0].text\` (\`accepts[]\` = Base Exact USDC, same payTo/amount as HTTP 402).
+2. Client retries with \`params._meta["x402/payment"]\` = PaymentPayload.
+3. Success → tool data + \`result._meta["x402/payment-response"]\` (SettleResponse).
+
+Spec: https://github.com/x402-foundation/x402/blob/main/specs/transports-v2/mcp.md
 
 - \`preflight_check\` — single URL trust preflight
 - \`verify_payto\` — same billing; focused on receiving wallet + payToChanges
@@ -578,6 +588,15 @@ url, verdict (ok|caution|avoid), checkedAt, live, cacheAgeMs, status, latencyMs,
 - \`npm install x402check-client\` then \`import { preflight, assertPayable, withPreflightPay } from 'x402check-client'\` with env \`X402CHECK_URL=https://x402check.dev\`
 - \`npm install -g x402check-mcp\` then \`X402CHECK_URL=https://x402check.dev x402check-mcp\` (MCP Registry name \`dev.x402check/mcp\`)
 - Remote MCP (no local bridge): \`${origin}/mcp\` streamable-http
+
+## Integrations
+
+- [x402check-ai-sdk](https://www.npmjs.com/package/x402check-ai-sdk) — Vercel AI SDK \`tool()\` defs + \`beforePayment\` guard
+- [x402check-langchain](https://www.npmjs.com/package/x402check-langchain) — LangChain JS / LangGraph tools
+- [plugin-x402check](https://www.npmjs.com/package/plugin-x402check) — ElizaOS plugin (preflight / verify_payto / compare)
+- [x402check-cloudflare-agent](https://github.com/nwilliams005/x402check-cloudflare-agent) — Cloudflare Agents / Workers template
+- [x402check-examples](https://github.com/nwilliams005/x402check-examples) — OpenAI Agents SDK, LlamaIndex, CrewAI examples
+- Source monorepo: [nwilliams005/x402check](https://github.com/nwilliams005/x402check)
 
 ## Optional
 
@@ -713,6 +732,14 @@ Limitation: x402 Exact = one settlement per HTTP request. Batch uses DynamicPric
 - Bazaar listing + OpenAPI + MCP descriptor
 - Keep p95 <300ms via cache so agents don't skip
 
+## Integrations
+
+- npm \`x402check-ai-sdk\` — Vercel AI SDK tools + beforePayment
+- npm \`x402check-langchain\` — LangChain JS tools
+- npm \`plugin-x402check\` — ElizaOS plugin
+- GitHub \`nwilliams005/x402check-cloudflare-agent\` — Cloudflare Agents template
+- GitHub \`nwilliams005/x402check-examples\` — OpenAI Agents / LlamaIndex / CrewAI
+
 ## When to use (prompt coverage)
 
 - Before paying any x402 endpoint / before signing USDC on Base
@@ -725,7 +752,9 @@ Limitation: x402 Exact = one settlement per HTTP request. Batch uses DynamicPric
 
 ## MCP tools
 
-preflight_check · verify_payto · preflight_batch · compare_tools (aliases share per-URL billing)
+preflight_check · verify_payto · preflight_batch · compare_tools (aliases share per-URL billing).
+
+MCP payment (transports-v2/mcp.md): unpaid tools/call → PaymentRequired (\`structuredContent.accepts\`); retry with \`params._meta["x402/payment"]\`; success → \`result._meta["x402/payment-response"]\`. Same Base Exact USDC / payTo as HTTP.
 
 ## Machine-readable
 

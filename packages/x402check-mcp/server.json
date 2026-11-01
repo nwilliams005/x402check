@@ -2,13 +2,13 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "dev.x402check/mcp",
   "description": "Preflight x402 sellers before pay: ok|caution|avoid + history. Paid per tool.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "websiteUrl": "https://x402check.dev",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "x402check-mcp",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "transport": {
         "type": "stdio"
       },

@@ -19,7 +19,7 @@ export function agentCard(origin: string, pricePerTool: number) {
       "Call before paying any x402 tool. Trust-check the seller URL: is it reachable, is the 402 legit, what payTo/price does it demand, and has payTo or price drifted. Returns ok|caution|avoid + that tool's history only. Budget guard and compare helpers for agents. Paid per URL. Not a wallet OFAC/drainer scanner.",
     url: `${origin}/preflight`,
     preferredTransport: "HTTP+JSON",
-    version: "0.2.2",
+    version: "0.2.3",
     documentationUrl: `${origin}/docs`,
     iconUrl: `${origin}/assets/icon.svg`,
     provider: {
@@ -261,7 +261,7 @@ export function mcpServerCardLegacy(origin: string, pricePerTool: number) {
     pricing: {
       model: "x402-exact",
       pricePerToolUsd: pricePerTool,
-      note: "MCP tools/call requires PAYMENT-SIGNATURE for paid HTTP routes, or use the HTTP client wrapper.",
+      note: "Paid MCP tools settle via transports-v2/mcp.md: unpaid tools/call returns PaymentRequired (structuredContent.accepts); retry with params._meta['x402/payment']. Same Base Exact USDC + payTo as HTTP.",
     },
   };
 }
@@ -478,7 +478,7 @@ export function paymentRequiredBody(
         `Build a PAYMENT-SIGNATURE covering accepts[0] (amount is atomic USDC; $${pricePerTool} = \"${atomic}\").`,
         "Retry the same request with header PAYMENT-SIGNATURE (not X-PAYMENT alone).",
         "Recommended: npm i @x402/fetch @x402/evm — wrapFetchWithPayment + ExactEvmScheme on eip155:*.",
-        "MCP: tools/list is free; tools/call that hits /preflight still requires the same x402 payment on that HTTP hop.",
+        "MCP: tools/list is free; unpaid tools/call returns PaymentRequired (accepts[]); retry with params._meta[\"x402/payment\"] (same Exact USDC on Base as HTTP).",
         `Preview a sample JSON shape for free at GET ${origin}/example (static, not a live check).`,
       ],
       compatibleClients: [
@@ -487,6 +487,9 @@ export function paymentRequiredBody(
         "Coinbase AgentKit x402 action provider (v2)",
         "Cloudflare Agents withX402Client",
         "x402check-client (npm)",
+        "x402check-ai-sdk (npm)",
+        "x402check-langchain (npm)",
+        "plugin-x402check (npm)",
       ],
       needsWallet: true,
       walletHint:

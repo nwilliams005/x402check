@@ -269,8 +269,16 @@ ${headTags({
       <li>Client wrapper that calls preflight before any x402 pay (<code>x402check-client</code>).</li>
       <li>Runtime skill/middleware default-on with env kill-switch.</li>
       <li>Policy: avoid→deny, caution→confirm, ok→still enforce maxAmount.</li>
-      <li>MCP tools: <code>preflight_check</code>, <code>verify_payto</code>, <code>preflight_batch</code>, <code>compare_tools</code>.</li>
+      <li>MCP tools: <code>preflight_check</code>, <code>verify_payto</code>, <code>preflight_batch</code>, <code>compare_tools</code>. Unpaid <code>tools/call</code> returns x402 <code>PaymentRequired</code>; pay via <code>_meta['x402/payment']</code>.</li>
       <li>Keep p95 &lt;300ms via cache so agents don’t skip.</li>
+    </ul>
+    <h2>Integrations</h2>
+    <ul>
+      <li><a href="https://www.npmjs.com/package/x402check-ai-sdk"><code>x402check-ai-sdk</code></a> — Vercel AI SDK tools + <code>beforePayment</code></li>
+      <li><a href="https://www.npmjs.com/package/x402check-langchain"><code>x402check-langchain</code></a> — LangChain JS tools</li>
+      <li><a href="https://www.npmjs.com/package/plugin-x402check"><code>plugin-x402check</code></a> — ElizaOS plugin</li>
+      <li><a href="https://github.com/nwilliams005/x402check-cloudflare-agent">Cloudflare Agents template</a></li>
+      <li><a href="https://github.com/nwilliams005/x402check-examples">OpenAI Agents / LlamaIndex / CrewAI examples</a></li>
     </ul>
     <h2>Machine-readable</h2>
     <p>

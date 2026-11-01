@@ -1,15 +1,25 @@
 /**
- * Minimal Streamable-HTTP MCP JSON-RPC surface for discovery + tool proxy.
- * tools/list is free. tools/call proxies to /preflight (caller must satisfy x402
- * on that HTTP path, or use local_bypass in dev).
+ * Streamable-HTTP MCP JSON-RPC surface.
+ * tools/list + initialize are free. Paid tools (preflight_check, verify_payto,
+ * preflight_batch, compare_tools) settle x402 Exact via MCP transport:
+ * unpaid → PaymentRequired in structuredContent; retry with
+ * params._meta["x402/payment"]; success → _meta["x402/payment-response"].
  *
- * Alias tools (verify_payto, compare_tools) map onto the same billing: per URL.
+ * Spec: https://github.com/x402-foundation/x402/blob/main/specs/transports-v2/mcp.md
  */
 import type { Context } from "hono";
 import type { Env } from "./types";
 import { checkTool, isBlockedHost } from "./preflight";
 import { MAX_BATCH, unitPriceUsd } from "./sell";
 import type { ToolCheck } from "./types";
+import {
+  PAID_BATCH_TOOLS,
+  PAID_SINGLE_TOOLS,
+  PAID_TOOLS,
+  billableToolCount,
+  createLivePaymentGate,
+  gatePaidToolCall,
+} from "./mcp-payment";
 
 type JsonRpc = {
   jsonrpc?: string;
@@ -44,7 +54,7 @@ function toolList(price: number) {
         description:
           "Mandatory trust preflight before paying any x402 endpoint. Pass the absolute https seller URL. Returns verdict ok|caution|avoid plus that tool's history only (uptime, payToChanges, priceChanges). Use when: about to settle / PAYMENT-SIGNATURE; asking if an endpoint is safe or legit; debugging a failing 402; checking uptime; validating payment requirements before signing USDC on Base. Do not pay if verdict=avoid. Charged $" +
           price +
-          " per URL via x402 on GET /preflight.",
+          " per URL via x402 Exact on this MCP tools/call (params._meta['x402/payment']).",
         inputSchema: {
           type: "object",
           required: ["url"],
@@ -62,12 +72,16 @@ function toolList(price: number) {
           openWorldHint: true,
           destructiveHint: false,
         },
-        _meta: { pricePerToolUsd: price, billsAs: "per_url" },
+        _meta: {
+          pricePerToolUsd: price,
+          billsAs: "per_url",
+          x402: { transport: "mcp", metaKey: "x402/payment" },
+        },
       },
       {
         name: "verify_payto",
         description:
-          "Verify the payTo / receiving wallet an x402 seller demands before you sign. Same check as preflight_check: live 402 probe + history.payToChanges (wallet rotations) and priceChanges. Use when confirming which Base USDC address you will pay, comparing payTo to an allowlist, or detecting a rug-style wallet swap. Charged per URL.",
+          "Verify the payTo / receiving wallet an x402 seller demands before you sign. Same check as preflight_check: live 402 probe + history.payToChanges (wallet rotations) and priceChanges. Use when confirming which Base USDC address you will pay, comparing payTo to an allowlist, or detecting a rug-style wallet swap. Charged per URL via MCP x402 payment.",
         inputSchema: {
           type: "object",
           required: ["url"],
@@ -89,12 +103,13 @@ function toolList(price: number) {
           pricePerToolUsd: price,
           billsAs: "per_url",
           aliasOf: "preflight_check",
+          x402: { transport: "mcp", metaKey: "x402/payment" },
         },
       },
       {
         name: "preflight_batch",
         description:
-          "Trust-check up to 25 x402 seller URLs in one request. Charged per URL (N × unit) in a single Exact settlement. Prefer when comparing candidates, picking the cheapest/most reliable, or screening Bazaar search hits before paying any of them.",
+          "Trust-check up to 25 x402 seller URLs in one request. Charged per URL (N × unit) in a single Exact settlement via MCP _meta payment. Prefer when comparing candidates, picking the cheapest/most reliable, or screening Bazaar search hits before paying any of them.",
         inputSchema: {
           type: "object",
           required: ["urls"],
@@ -115,12 +130,16 @@ function toolList(price: number) {
           openWorldHint: true,
           destructiveHint: false,
         },
-        _meta: { pricePerToolUsd: price, billsAs: "per_url" },
+        _meta: {
+          pricePerToolUsd: price,
+          billsAs: "per_url",
+          x402: { transport: "mcp", metaKey: "x402/payment" },
+        },
       },
       {
         name: "compare_tools",
         description:
-          "Compare several x402 tools before choosing which to pay. Alias of preflight_batch: returns each URL's verdict, priceUsd, payTo, uptimePct, and drift history so you can pick reliable/cheap candidates and skip avoid. Charged per URL.",
+          "Compare several x402 tools before choosing which to pay. Alias of preflight_batch: returns each URL's verdict, priceUsd, payTo, uptimePct, and drift history so you can pick reliable/cheap candidates and skip avoid. Charged per URL via MCP x402 payment.",
         inputSchema: {
           type: "object",
           required: ["urls"],
@@ -145,6 +164,7 @@ function toolList(price: number) {
           pricePerToolUsd: price,
           billsAs: "per_url",
           aliasOf: "preflight_batch",
+          x402: { transport: "mcp", metaKey: "x402/payment" },
         },
       },
     ],
@@ -204,12 +224,43 @@ async function runBatch(
   };
 }
 
+async function executePaidTool(
+  name: string,
+  args: Record<string, unknown>,
+  env: Env,
+  price: number,
+): Promise<unknown> {
+  if (PAID_SINGLE_TOOLS.has(name)) {
+    const url = typeof args.url === "string" ? args.url.trim() : "";
+    return runOne(url, env, args.fresh === true);
+  }
+  if (PAID_BATCH_TOOLS.has(name)) {
+    const list = Array.isArray(args.urls)
+      ? (args.urls as unknown[])
+          .filter((u): u is string => typeof u === "string" && !!u.trim())
+          .map((u) => u.trim())
+      : [];
+    const seen = new Set<string>();
+    const deduped: string[] = [];
+    for (const u of list) {
+      if (seen.has(u)) continue;
+      seen.add(u);
+      deduped.push(u);
+      if (deduped.length >= MAX_BATCH) break;
+    }
+    return runBatch(deduped, env, args.fresh === true, price);
+  }
+  throw new Error(`Unknown paid tool: ${name}`);
+}
+
 export async function handleMcp(c: Context<{ Bindings: Env }>) {
   if (c.req.method === "GET") {
     return c.json({
       name: "x402check",
       transport: "streamable-http",
       hint: "POST JSON-RPC: initialize | tools/list | tools/call",
+      payment:
+        "Paid tools settle x402 Exact via params._meta['x402/payment'] (see transports-v2/mcp.md). tools/list is free.",
       descriptor: "/mcp.json",
       serverCard: "/.well-known/mcp/server-card.json",
       tools: [
@@ -239,10 +290,10 @@ export async function handleMcp(c: Context<{ Bindings: Env }>) {
         capabilities: { tools: {} },
         serverInfo: {
           name: "x402check",
-          version: "0.2.2",
+          version: "0.2.3",
         },
         instructions:
-          `Before any x402 payment, call preflight_check (or verify_payto). To compare sellers, call compare_tools / preflight_batch. Unit $${price}/URL. Deny pay when verdict=avoid; escalate on caution; still enforce maxAmount on ok. We probe the endpoint's live 402 + history (not wallet OFAC/simulation).`,
+          `Before any x402 payment, call preflight_check (or verify_payto). To compare sellers, call compare_tools / preflight_batch. Unit $${price}/URL via x402 Exact on MCP tools/call: unpaid calls return PaymentRequired (structuredContent.accepts); retry with params._meta["x402/payment"]. Deny pay when verdict=avoid; escalate on caution; still enforce maxAmount on ok. We probe the endpoint's live 402 + history (not wallet OFAC/simulation).`,
       }),
     );
   }
@@ -259,40 +310,14 @@ export async function handleMcp(c: Context<{ Bindings: Env }>) {
     const params = body.params || {};
     const name = String(params.name || "");
     const args = (params.arguments || {}) as Record<string, unknown>;
+    const meta = params._meta;
 
-    const bypass =
-      c.env.ALLOW_LOCAL_BYPASS === "true" &&
-      (c.req.header("x-local-dev-bypass") === "1" ||
-        c.req.query("local_bypass") === "1");
-
-    if (!bypass) {
-      return c.json(
-        ok(id, {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify({
-                error: "payment_required",
-                message:
-                  "Pay via x402 Exact on HTTP GET/POST /preflight (PAYMENT-SIGNATURE), or use x402check-client. MCP tools/call does not settle payment itself. Billing is per tool URL checked.",
-                http: {
-                  get: "/preflight?url=",
-                  post: "/preflight",
-                  openapi: "/openapi.json",
-                  pricePerToolUsd: price,
-                },
-              }),
-            },
-          ],
-          isError: true,
-        }),
-      );
+    if (!PAID_TOOLS.has(name)) {
+      return c.json(err(id, -32601, `Unknown tool: ${name}`));
     }
 
-    const singleNames = new Set(["preflight_check", "verify_payto"]);
-    const batchNames = new Set(["preflight_batch", "compare_tools"]);
-
-    if (singleNames.has(name)) {
+    // Validate args before challenging payment.
+    if (PAID_SINGLE_TOOLS.has(name)) {
       const url = typeof args.url === "string" ? args.url.trim() : "";
       if (!url) {
         return c.json(
@@ -302,16 +327,8 @@ export async function handleMcp(c: Context<{ Bindings: Env }>) {
           }),
         );
       }
-      const result = await runOne(url, c.env, args.fresh === true);
-      return c.json(
-        ok(id, {
-          content: [{ type: "text", text: JSON.stringify(result) }],
-          structuredContent: result,
-        }),
-      );
     }
-
-    if (batchNames.has(name)) {
+    if (PAID_BATCH_TOOLS.has(name)) {
       const list = Array.isArray(args.urls)
         ? (args.urls as unknown[]).filter(
             (u): u is string => typeof u === "string" && !!u.trim(),
@@ -325,16 +342,36 @@ export async function handleMcp(c: Context<{ Bindings: Env }>) {
           }),
         );
       }
-      const payload = await runBatch(list, c.env, args.fresh === true, price);
+    }
+
+    const bypass =
+      c.env.ALLOW_LOCAL_BYPASS === "true" &&
+      (c.req.header("x-local-dev-bypass") === "1" ||
+        c.req.query("local_bypass") === "1");
+
+    if (bypass) {
+      const data = await executePaidTool(name, args, c.env, price);
       return c.json(
         ok(id, {
-          content: [{ type: "text", text: JSON.stringify(payload) }],
-          structuredContent: payload,
+          content: [{ type: "text", text: JSON.stringify(data) }],
+          structuredContent: data as Record<string, unknown>,
         }),
       );
     }
 
-    return c.json(err(id, -32601, `Unknown tool: ${name}`));
+    const toolCount = billableToolCount(name, args);
+    const gate = await createLivePaymentGate(c.env);
+    const result = await gatePaidToolCall({
+      toolName: name,
+      args,
+      meta,
+      description: `x402check ${name}`,
+      unitUsd: price,
+      toolCount,
+      gate,
+      run: () => executePaidTool(name, args, c.env, price),
+    });
+    return c.json(ok(id, result));
   }
 
   return c.json(err(id, -32601, `Method not found: ${method}`));

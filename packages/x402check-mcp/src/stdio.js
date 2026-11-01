@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * Minimal stdio MCP bridge → remote POST /mcp or HTTP /preflight.
- * Draft for registry packaging; not a full SDK client.
+ * Minimal stdio MCP bridge → remote POST /mcp.
+ * Forwards params._meta (including x402/payment) unchanged.
+ * Paid tools settle on the remote Worker per transports-v2/mcp.md.
  */
 import { createInterface } from "node:readline";
 

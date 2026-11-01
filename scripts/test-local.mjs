@@ -281,6 +281,57 @@ async function main() {
       });
     }
 
+    // Unpaid MCP tools/call → PaymentRequired (transports-v2/mcp.md)
+    {
+      const r = await fetch(`${BASE}/mcp`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 3,
+          method: "tools/call",
+          params: {
+            name: "preflight_check",
+            arguments: { url: TARGETS[0] },
+          },
+        }),
+      });
+      const body = await r.json();
+      const result = body?.result;
+      const sc = result?.structuredContent;
+      const textJson = result?.content?.[0]?.text;
+      let parsed = null;
+      try {
+        parsed = textJson ? JSON.parse(textJson) : null;
+      } catch {
+        parsed = null;
+      }
+      const accepts = Array.isArray(sc?.accepts) ? sc.accepts : [];
+      const baseAccept = accepts.find(
+        (a) => a?.scheme === "exact" && String(a?.network || "").startsWith("eip155:"),
+      );
+      results.push({
+        test: "MCP unpaid tools/call → PaymentRequired + accepts",
+        status: r.status,
+        ok:
+          r.status === 200 &&
+          body?.jsonrpc === "2.0" &&
+          result?.isError === true &&
+          sc?.x402Version === 2 &&
+          Array.isArray(sc?.accepts) &&
+          sc.accepts.length >= 1 &&
+          Boolean(baseAccept) &&
+          typeof baseAccept.payTo === "string" &&
+          baseAccept.payTo.startsWith("0x") &&
+          sc?.resource?.url === "mcp://tool/preflight_check" &&
+          parsed?.x402Version === 2 &&
+          Array.isArray(parsed?.accepts),
+        accepts: accepts.length,
+        resource: sc?.resource?.url,
+        error: sc?.error,
+      });
+    }
+
     // Unpaid /preflight → 402 with howToPay body
     {
       let ok = false;

@@ -46,3 +46,15 @@ Or in an MCP host config:
 Remote Streamable HTTP (no local bridge): `https://x402check.dev/mcp`
 
 Paid **per tool checked** via x402 Exact USDC on Base. No free tier. See https://x402check.dev/llms.txt
+
+## MCP payment (remote)
+
+The stdio bridge forwards JSON-RPC as-is to `POST $X402CHECK_URL/mcp`, including `params._meta`.
+
+Per [transports-v2/mcp.md](https://github.com/x402-foundation/x402/blob/main/specs/transports-v2/mcp.md):
+
+1. Unpaid `tools/call` → `isError` + `PaymentRequired` (`structuredContent.accepts` = Base Exact, same payTo as HTTP).
+2. Client retries with `params._meta["x402/payment"]` = PaymentPayload.
+3. Success → tool data + `result._meta["x402/payment-response"]`.
+
+`initialize` / `tools/list` stay free. Local bypass for tests: `X402CHECK_BYPASS=1`.
