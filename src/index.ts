@@ -334,15 +334,14 @@ function paymentRoutes(env: Env, origin: string) {
   const serviceName = (env.SERVICE_NAME || "x402check").slice(0, 32);
   const tags = [
     "x402",
-    "trust",
+    "check-before-paying",
+    "scam-check",
     "preflight",
-    "agent-safety",
     "verify-payTo",
+    "agent-safety",
     "uptime",
-    "price-history",
-    "endpoint-health",
-    "compare-tools",
     "budget-guard",
+    "compare-tools",
     "base",
     ...(pay.solanaPayTo ? (["solana"] as const) : []),
   ];
@@ -363,7 +362,7 @@ function paymentRoutes(env: Env, origin: string) {
   return {
     "GET /preflight": {
       description:
-        "Before paying any x402 tool: trust-check one seller URL. Use for is-this-endpoint-safe, verify-payTo, uptime, price/wallet drift, budget guard, validate 402, debug failing settle. Returns ok|caution|avoid + that tool's history only. No free tier. Endpoint+history — not wallet OFAC/simulation.",
+        "Check before paying any x402 tool: is this API a scam/safe? Trust-check one seller URL (live 402 + history). Use for verify-payTo, uptime, price/wallet drift, budget guard, validate 402, debug failing settle. Returns ok|caution|avoid + that tool's history only. $0.002/URL. No free tier. Endpoint+history — not wallet OFAC/simulation.",
       mimeType: "application/json",
       serviceName,
       tags,
@@ -391,7 +390,7 @@ function paymentRoutes(env: Env, origin: string) {
     },
     "POST /preflight": {
       description:
-        `Before paying: compare/batch trust-check up to ${MAX_BATCH} seller URLs (cheapest, most reliable, screen Bazaar hits). Charge $${u} × len(urls) in one Exact settlement. Returns each tool's verdict + history.`,
+        `Check before paying: compare/batch trust-check up to ${MAX_BATCH} seller URLs (is any a scam/unsafe; cheapest; most reliable; screen Bazaar hits). Charge $${u} × len(urls) in one Exact settlement. Returns each tool's verdict + history.`,
       mimeType: "application/json",
       serviceName,
       tags,
