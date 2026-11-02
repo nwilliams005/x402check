@@ -32,6 +32,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
     info: {
       title: "x402check",
       version: "0.3.0",
+      termsOfService: `${origin}/terms`,
       summary:
         "Check before paying any x402 API — paid trust preflight (ok|caution|avoid + history)",
       description:
@@ -238,6 +239,36 @@ export function openApiSpec(origin: string, pricePerTool: number) {
             },
             "400": { description: "missing_url | blocked host" },
             "402": { description: "Payment Required — $0.05 Exact (50000 atomic USDC)" },
+          },
+        },
+      },
+      "/terms": {
+        get: {
+          operationId: "getTerms",
+          summary: "Terms of Use (HTML)",
+          tags: ["Discovery"],
+          responses: {
+            "200": { description: "HTML Terms of Use" },
+          },
+        },
+      },
+      "/privacy": {
+        get: {
+          operationId: "getPrivacy",
+          summary: "Privacy Policy (HTML)",
+          tags: ["Discovery"],
+          responses: {
+            "200": { description: "HTML Privacy Policy" },
+          },
+        },
+      },
+      "/cookies": {
+        get: {
+          operationId: "getCookies",
+          summary: "Cookie Notice (HTML)",
+          tags: ["Discovery"],
+          responses: {
+            "200": { description: "HTML Cookie Notice" },
           },
         },
       },
@@ -791,6 +822,9 @@ Exact settles one amount per HTTP request. Batch uses DynamicPrice = len(urls)*u
 - [MCP endpoint](${origin}/mcp): Streamable-HTTP JSON-RPC (tools/list free; paid tools/call settle x402 Exact via \`_meta['x402/payment']\` per transports-v2/mcp.md)
 - [Intent map](${origin}/docs): See site docs / INTENTS.md in repo for full prompt coverage
 - [Sitemap](${origin}/sitemap.xml): Search-engine sitemap
+- [Terms of Use](${origin}/terms): Pricing, advisory disclaimers, Alabama law
+- [Privacy Policy](${origin}/privacy): What we store (watch emails, stats) and processors
+- [Cookie Notice](${origin}/cookies): No first-party cookies or analytics trackers
 
 ## Endpoints
 
@@ -962,6 +996,9 @@ Pay $${pricePerTool} via x402 Exact on Base, then retry with PAYMENT-SIGNATURE.
 - [OpenAPI](${origin}/openapi.json)
 - [llms.txt](${origin}/llms.txt)
 - [Live stats](${origin}/stats)
+- [Terms of Use](${origin}/terms)
+- [Privacy Policy](${origin}/privacy)
+- [Cookie Notice](${origin}/cookies)
 - [MCP Server Card](${origin}/mcp/server-card)
 - [A2A Agent Card](${origin}/.well-known/agent-card.json)
 - [AI Catalog](${origin}/.well-known/ai-catalog.json)

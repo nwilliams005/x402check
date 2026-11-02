@@ -21,6 +21,8 @@ import {
   watchKey,
   formatBaselineLine,
   sendWatchEmail,
+  maskEmail,
+  publicWatch,
 } from "../src/watch.ts";
 
 function memoryKv() {
@@ -244,4 +246,39 @@ test("sendWatchEmail no-ops without RESEND_API_KEY", async () => {
     },
   );
   assert.equal(ok, false);
+});
+
+test("maskEmail and publicWatch redact subscriber contact", () => {
+  assert.equal(maskEmail("buyer@example.com"), "b***@example.com");
+  assert.equal(maskEmail("a@x.co"), "a***@x.co");
+  assert.equal(maskEmail("bad"), "***");
+  const rec = {
+    id: "abc123",
+    url: "https://seller.example/tool",
+    webhookUrl: "https://hooks.example/x",
+    email: "buyer@example.com",
+    createdAt: "2026-11-01T00:00:00.000Z",
+    expiresAt: "2026-12-01T00:00:00.000Z",
+    lastCheckedAt: null,
+    lastAlertAt: null,
+    baseline: {
+      payTo: "0x1",
+      priceUsd: 0.01,
+      network: "eip155:8453",
+      reachable: true,
+      is402: true,
+      verdict: "ok",
+    },
+    alerts: [],
+    active: true,
+  };
+  const pub = publicWatch(rec);
+  assert.equal(pub.email, null);
+  assert.equal(pub.webhookUrl, null);
+  assert.equal(pub.hasEmail, true);
+  assert.equal(pub.hasWebhook, true);
+  assert.equal(pub.emailMasked, "b***@example.com");
+  assert.equal(pub.id, "abc123");
+  assert.equal(rec.email, "buyer@example.com");
+  assert.equal(rec.webhookUrl, "https://hooks.example/x");
 });

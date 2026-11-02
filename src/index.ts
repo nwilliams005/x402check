@@ -25,6 +25,7 @@ import {
   unitPriceUsd,
 } from "./sell";
 import { docsHtml, landingHtml, styleCss } from "./pages";
+import { cookiesHtml, privacyHtml, termsHtml } from "./legal";
 import { loadStats, recordCheckStats } from "./stats";
 import {
   WATCH_DURATION_MS,
@@ -209,6 +210,23 @@ app.get("/", async (c) => {
     Link: `<${origin}/llms.txt>; rel="describedby", <${origin}/index.md>; rel="alternate"; type="text/markdown"`,
   });
 });
+
+
+app.get("/terms", (c) =>
+  c.html(termsHtml(originOf(c)), 200, {
+    "Cache-Control": "public, max-age=3600",
+  }),
+);
+app.get("/privacy", (c) =>
+  c.html(privacyHtml(originOf(c)), 200, {
+    "Cache-Control": "public, max-age=3600",
+  }),
+);
+app.get("/cookies", (c) =>
+  c.html(cookiesHtml(originOf(c)), 200, {
+    "Cache-Control": "public, max-age=3600",
+  }),
+);
 
 app.get("/docs", (c) => {
   const origin = originOf(c);

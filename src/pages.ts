@@ -18,17 +18,27 @@ h1 span{color:#7dd3a7}.lede{color:#9fb3c8;max-width:38rem}.eyebrow{text-transfor
 .faq summary{cursor:pointer;font-weight:600}.faq p{color:#9fb3c8;margin:.5rem 0 0}
 .stats-card{margin:1.5rem 0 0}.stats-card .kicker{text-transform:uppercase;letter-spacing:.12em;font-size:.72rem;color:#7dd3a7;margin:0 0 .4rem}
 .stats-line{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9rem;color:#c5d4e5;margin:0}
-.tiny{font-size:.78rem;margin:.45rem 0 0}.muted{color:#7a8ea3}.stats-card a{color:#7dd3a7}`;
+.tiny{font-size:.78rem;margin:.45rem 0 0}.muted{color:#7a8ea3}.stats-card a{color:#7dd3a7}
+.legal{padding:2rem 1.25rem 4rem}.legal h1{font-size:clamp(1.6rem,3vw,2rem);margin:0 0 .75rem}
+.legal h2{font-size:1.15rem;margin:1.75rem 0 .6rem}.legal h3{font-size:1rem;margin:1.1rem 0 .4rem}
+.legal p,.legal li{color:#c5d4e5}.legal ul{padding-left:1.2rem}.legal .meta{color:#7a8ea3;font-size:.9rem}
+.legal pre{white-space:pre-wrap}.legal table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.9rem}
+.legal th,.legal td{border:1px solid #1e2a3a;padding:.5rem .6rem;text-align:left;vertical-align:top}
+.legal th{background:#0e1520;color:#9fb3c8}.foot nav a{margin-left:.75rem}`;
 
-function headTags(opts: {
+export function headTagsFragment(opts: {
   origin: string;
   title: string;
   description: string;
   path: string;
   jsonLd?: object;
+  omitMarkdown?: boolean;
 }): string {
   const canonical = `${opts.origin}${opts.path}`;
   const mdPath = opts.path === "/" ? "/index.md" : `${opts.path}.md`;
+  const mdLink = opts.omitMarkdown
+    ? ""
+    : `\n  <link rel="alternate" type="text/markdown" href="${opts.origin}${mdPath}" />`;
   const jsonLd = opts.jsonLd
     ? `\n  <script type="application/ld+json">${JSON.stringify(opts.jsonLd)}</script>`
     : "";
@@ -37,8 +47,7 @@ function headTags(opts: {
   <title>${opts.title}</title>
   <meta name="description" content="${opts.description}" />
   <link rel="canonical" href="${canonical}" />
-  <link rel="icon" href="/assets/icon.svg" type="image/svg+xml" />
-  <link rel="alternate" type="text/markdown" href="${opts.origin}${mdPath}" />
+  <link rel="icon" href="/assets/icon.svg" type="image/svg+xml" />${mdLink}
   <link rel="describedby" href="${opts.origin}/llms.txt" />
   <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
   <meta property="og:type" content="website" />
@@ -53,6 +62,35 @@ function headTags(opts: {
   <meta name="twitter:description" content="${opts.description}" />
   <meta name="keywords" content="x402, x402check, check before paying, is this API a scam, is this x402 endpoint safe, verify payTo, agent trust, preflight, USDC, Base, MCP, AI agent tools, uptime, price drift, budget guard, compare x402 tools" />
   <link rel="stylesheet" href="/assets/style.css" />${jsonLd}`;
+}
+
+export function siteNav(currentPath = ""): string {
+  const link = (href: string, label: string) => {
+    const cur = currentPath === href ? ' aria-current="page"' : "";
+    return `<a href="${href}"${cur}>${label}</a>`;
+  };
+  return `  <header class="wrap nav">
+    <a class="brand" href="/">x402check</a>
+    <nav>
+      ${link("/docs", "Docs")}
+      ${link("/stats", "Stats")}
+      <a href="/openapi.json">OpenAPI</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="/mcp.json">MCP</a>
+    </nav>
+  </header>`;
+}
+
+export function siteFooter(): string {
+  return `  <footer class="wrap foot">
+    <span>x402 Exact · USDC · Base · agents first</span>
+    <nav>
+      <a href="/terms">Terms</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/cookies">Cookies</a>
+      <a href="/docs">Docs</a>
+    </nav>
+  </footer>`;
 }
 
 function softwareJsonLd(origin: string, pricePerTool: number) {
@@ -74,7 +112,7 @@ function softwareJsonLd(origin: string, pricePerTool: number) {
           "Check before paying any x402 API. Paid per-tool trust preflight for AI agents: is this API a scam/legit, verify payTo, detect price/wallet drift, check uptime, compare sellers, budget guard.",
         url: origin,
         documentation: `${origin}/docs`,
-        termsOfService: `${origin}/docs`,
+        termsOfService: `${origin}/terms`,
         provider: { "@id": `${origin}/#org` },
         offers: {
           "@type": "Offer",
@@ -220,7 +258,7 @@ export function landingHtml(
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-${headTags({
+${headTagsFragment({
   origin,
   title: "x402check — check before paying any x402 API (AI agent trust preflight)",
   description,
@@ -299,10 +337,7 @@ ${headTags({
     </section>
     <p class="fine">We never pay the target. Agents-first brand. Markdown twin: <a href="/index.md">/index.md</a>.</p>
   </main>
-  <footer class="wrap foot">
-    <span>x402 Exact · USDC · Base · agents first</span>
-    <a href="/docs">Integration →</a>
-  </footer>
+  ${siteFooter().trim()}
 </body>
 </html>`;
 }
@@ -313,7 +348,7 @@ export function docsHtml(origin: string, pricePerTool: number): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-${headTags({
+${headTagsFragment({
   origin,
   title: "Docs — x402check agent trust preflight",
   description,
@@ -383,6 +418,7 @@ ${headTags({
       <a href="/docs.md">docs.md</a>
     </p>
   </main>
+  ${siteFooter().trim()}
 </body>
 </html>`;
 }

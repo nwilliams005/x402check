@@ -190,12 +190,46 @@ export async function createWatch(
   await saveWatch(env.PAYTO_HISTORY, rec);
   // touch prior so callers can detect isNewTool if needed
   void prior;
-  return { ok: true, watch: publicWatch(rec), check };
+  // Return the raw record so the paid create response can confirm email/webhook once.
+  // GET /watch uses publicWatch() and redacts those fields.
+  return { ok: true, watch: rec, check };
 }
 
-export function publicWatch(rec: WatchRecord): WatchRecord {
-  // Return a copy without mutating; same shape for now.
-  return { ...rec, alerts: rec.alerts.slice(0, WATCH_MAX_ALERTS) };
+/** Mask an email for status responses (never return the full address on GET). */
+export function maskEmail(email: string): string {
+  const at = email.indexOf("@");
+  if (at <= 0) return "***";
+  const local = email.slice(0, at);
+  const domain = email.slice(at + 1);
+  const keep = local.slice(0, 1) || "*";
+  return `${keep}***@${domain}`;
+}
+
+export type PublicWatch = Omit<WatchRecord, "email" | "webhookUrl"> & {
+  /** Always null on public status responses. */
+  email: null;
+  /** Always null on public status responses. */
+  webhookUrl: null;
+  hasEmail: boolean;
+  hasWebhook: boolean;
+  emailMasked: string | null;
+};
+
+/**
+ * Public watch status view. Redacts email and webhookUrl so a leaked watch id
+ * cannot expose subscriber contact details. Create/renew HTTP handlers that need
+ * the clear values should read the raw WatchRecord before calling this.
+ */
+export function publicWatch(rec: WatchRecord): PublicWatch {
+  return {
+    ...rec,
+    alerts: rec.alerts.slice(0, WATCH_MAX_ALERTS),
+    email: null,
+    webhookUrl: null,
+    hasEmail: Boolean(rec.email),
+    hasWebhook: Boolean(rec.webhookUrl),
+    emailMasked: rec.email ? maskEmail(rec.email) : null,
+  };
 }
 
 export async function renewWatch(
@@ -212,7 +246,7 @@ export async function renewWatch(
   existing.active = true;
   await saveWatch(env.PAYTO_HISTORY, existing);
   const check = await checkTool(existing.url, env, { forceLive: false });
-  return { ok: true, watch: publicWatch(existing), check };
+  return { ok: true, watch: existing, check };
 }
 
 export type CronSummary = {
