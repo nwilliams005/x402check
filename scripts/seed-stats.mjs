@@ -141,9 +141,10 @@ async function main() {
   const transfers = await fetchOnChainTransfers();
   const checkPrice = transfers.filter((t) => t.atomic === 10000 || t.atomic === 50000 || t.atomic === 2000);
   // Count Exact base ($0.01=10000) and deep ($0.05=50000) checks; exclude $5 watches (5000000).
-  const paid = checkPrice;
+  // Aggregates exclude INTERNAL test wallet; transfers list still includes them flagged.
+  const paid = checkPrice.filter((t) => !t.internalTest);
   const unique = new Set(paid.map((t) => t.from));
-  const internal = paid.filter((t) => t.internalTest).length;
+  const internal = checkPrice.filter((t) => t.internalTest).length;
   const usdcTotal = paid.reduce((s, t) => s + t.usdc, 0);
   const asOf = new Date().toISOString();
 
@@ -157,7 +158,7 @@ async function main() {
     network: "eip155:8453",
     payTo: PAY_TO,
     asset: USDC,
-    transfers: paid,
+    transfers: checkPrice,
   };
 
   console.log("On-chain check transfers ($0.01/$0.05/legacy $0.002):", paid.length, "usdc", usdcTotal, "wallets", unique.size);
@@ -223,7 +224,7 @@ async function main() {
   // If not, leave flagged as recent-only and do not pad.
   const noteDetail =
     internal > 0
-      ? `includes ${internal} internal test check${internal === 1 ? "" : "s"}`
+      ? `excludes ${internal} internal test check${internal === 1 ? "" : "s"} from paid counts`
       : null;
 
   const global = {

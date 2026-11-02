@@ -51,7 +51,7 @@ await pay('https://seller.example/api');
 - `assertPayable(check, { allowCaution? })`
 - `withPreflightPay(payFn, opts?)` — wrap a pay function so preflight runs first
 
-Paid **per tool checked** via x402 Exact USDC on Base. No free tier.
+**1 free regular check per wallet**, then **$0.01**/URL Exact USDC on Base. Optional deep check **$0.05**. Optional watch **$5**/30d.
 
 - Docs: https://x402check.dev/llms.txt
 - Live stats: https://x402check.dev/stats

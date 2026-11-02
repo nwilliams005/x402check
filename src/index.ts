@@ -45,6 +45,7 @@ import {
   badgeEmbedSnippet,
 } from "./badge";
 import { loadStats, recordCheckStats } from "./stats";
+import { refreshOnChainStats } from "./onchain-refresh";
 import {
   WATCH_DURATION_MS,
   WATCH_PRICE_ATOMIC,
@@ -105,6 +106,20 @@ app.use("*", async (c, next) => {
   for (const [k, v] of Object.entries(CORS_HEADERS)) {
     if (!c.res.headers.has(k)) c.res.headers.set(k, v);
   }
+  // Security headers (CSP allows inline script/style used by owner dashboard + pages).
+  const h = c.res.headers;
+  if (!h.has("Content-Security-Policy")) {
+    h.set(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+    );
+  }
+  if (!h.has("X-Frame-Options")) h.set("X-Frame-Options", "DENY");
+  if (!h.has("Strict-Transport-Security")) {
+    h.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+  }
+  if (!h.has("Referrer-Policy")) h.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  if (!h.has("X-Content-Type-Options")) h.set("X-Content-Type-Options", "nosniff");
 });
 
 /**
@@ -1271,6 +1286,8 @@ export default {
         console.log("watch-cron", JSON.stringify(watch));
         const scan = await runScanCron(env);
         console.log("scan-cron", JSON.stringify(scan));
+        const onchain = await refreshOnChainStats(env);
+        console.log("onchain-cron", JSON.stringify(onchain));
       })(),
     );
   },

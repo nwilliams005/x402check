@@ -73,7 +73,8 @@ export function siteNav(currentPath = ""): string {
     <a class="brand" href="/">x402check</a>
     <nav>
       ${link("/docs", "Docs")}
-      ${link("/scan", "Owners")}
+      ${link("/scan", "Scan")}
+      ${link("/owner", "Owner")}
       ${link("/stats", "Stats")}
       <a href="/openapi.json">OpenAPI</a>
       <a href="/llms.txt">llms.txt</a>
@@ -273,6 +274,8 @@ ${headTagsFragment({
     <a class="brand" href="/">x402check</a>
     <nav>
       <a href="/docs">Docs</a>
+      <a href="/scan">Scan</a>
+      <a href="/owner">Owner</a>
       <a href="/stats">Stats</a>
       <a href="/openapi.json">OpenAPI</a>
       <a href="/llms.txt">llms.txt</a>
@@ -283,7 +286,7 @@ ${headTagsFragment({
     <p class="eyebrow">$${pricePerTool} / tool · 1 free regular / wallet · deep $0.05 · watch $5/30d</p>
     <h1>Trust-check a tool<br/><span>before your agent pays it.</span></h1>
     <p class="lede">
-      Every check is paid. You get that tool’s <strong>verdict</strong> plus its
+      One free regular check per wallet; then paid. You get that tool’s <strong>verdict</strong> plus its
       <strong>history</strong> (uptime, payTo changes, price changes) — nothing else.
       Cache-fresh responses target &lt;300&nbsp;ms. Built for agents that need to
       <em>check before paying</em>, ask <em>is this API a scam</em> /
@@ -363,6 +366,8 @@ ${headTagsFragment({
     <a class="brand" href="/">x402check</a>
     <nav>
       <a href="/docs" aria-current="page">Docs</a>
+      <a href="/scan">Scan</a>
+      <a href="/owner">Owner</a>
       <a href="/stats">Stats</a>
       <a href="/openapi.json">OpenAPI</a>
       <a href="/llms.txt">llms.txt</a>

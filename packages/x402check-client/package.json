@@ -1,6 +1,6 @@
 {
   "name": "x402check-client",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Call x402check before any x402 payment \u2014 trust-check seller URLs (ok|caution|avoid) with payTo, uptime, and price/wallet history.",
   "type": "module",
   "main": "./src/index.js",

@@ -50,7 +50,7 @@ Or in an MCP host config:
 
 Remote Streamable HTTP (no local bridge): `https://x402check.dev/mcp`
 
-Paid **per tool checked** via x402 Exact USDC on Base. No free tier. See https://x402check.dev/llms.txt
+**1 free regular check per wallet**, then **$0.01**/URL Exact USDC on Base. Optional deep check **$0.05**. Optional watch **$5**/30d. See https://x402check.dev/llms.txt
 
 ## MCP payment (remote)
 
