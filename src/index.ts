@@ -1,5 +1,5 @@
 /**
- * x402 Tool Trust Preflight — paid per-tool checks (no free tier for probes).
+ * x402 Tool Trust Preflight — paid per-tool checks; one free regular check per wallet.
  * Production: Base mainnet USDC via CDP (Solana behind ENABLE_SOLANA=false).
  * Dev: wrangler.dev.toml Base Sepolia. Do not deploy without Nicklaus's explicit approval.
  */
@@ -26,6 +26,24 @@ import {
 } from "./sell";
 import { docsHtml, landingHtml, styleCss } from "./pages";
 import { cookiesHtml, privacyHtml, termsHtml } from "./legal";
+import { scanExplainHtml, ownerDashboardHtml } from "./scan-pages";
+import {
+  issueFreeChallenge,
+  redeemFreeCheck,
+} from "./free-check";
+import { runScanCron } from "./scan";
+import {
+  issueOwnerChallenge,
+  verifyOwnerPayTo,
+  verifyOwnerDnsOrWellKnown,
+  ownerDashboard,
+} from "./owner";
+import {
+  optInBadge,
+  revokeBadge,
+  renderPublicBadge,
+  badgeEmbedSnippet,
+} from "./badge";
 import { loadStats, recordCheckStats } from "./stats";
 import {
   WATCH_DURATION_MS,
@@ -73,7 +91,7 @@ const CORS_HEADERS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers":
-    "Content-Type, Authorization, PAYMENT-SIGNATURE, PAYMENT-REQUIRED, X-PAYMENT, X-PAYMENT-RESPONSE, Accept",
+    "Content-Type, Authorization, PAYMENT-SIGNATURE, PAYMENT-REQUIRED, X-PAYMENT, X-PAYMENT-RESPONSE, Accept, X-Free-Check-Address, X-Free-Check-Nonce, X-Free-Check-Signature",
   "Access-Control-Expose-Headers":
     "PAYMENT-REQUIRED, PAYMENT-RESPONSE, X-PAYMENT-RESPONSE",
   "Access-Control-Max-Age": "86400",
@@ -334,6 +352,21 @@ app.get("/mcp/server-card", (c) =>
 
 app.all("/mcp", (c) => handleMcp(c));
 
+
+function clientIp(c: { req: { header: (n: string) => string | undefined } }): string {
+  return (
+    c.req.header("cf-connecting-ip") ||
+    c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "unknown"
+  );
+}
+
+function bearerToken(c: { req: { header: (n: string) => string | undefined } }): string | null {
+  const h = c.req.header("authorization") || "";
+  const m = /^Bearer\s+(.+)$/i.exec(h);
+  return m ? m[1].trim() : null;
+}
+
 async function maybeBypass(c: {
   env: Env;
   req: { header: (n: string) => string | undefined; query: (n: string) => string | undefined };
@@ -383,7 +416,7 @@ function paymentRoutes(env: Env, origin: string) {
   return {
     "GET /preflight": {
       description:
-        `Check before paying any x402 tool: is this API a scam/safe? Trust-check one seller URL (live 402 + history). Use for verify-payTo, uptime, price/wallet drift, budget guard, validate 402, debug failing settle. Returns ok|caution|avoid + that tool's history only. $${u}/URL. No free tier. Endpoint+history — not wallet OFAC/simulation. Optional deeper signal: GET /preflight/deep ($${DEEP_CHECK_PRICE_USD}).`,
+        `Check before paying any x402 tool: is this API a scam/safe? Trust-check one seller URL (live 402 + history). Use for verify-payTo, uptime, price/wallet drift, budget guard, validate 402, debug failing settle. Returns ok|caution|avoid + that tool's history only. $${u}/URL. One free regular check per wallet via /preflight/free. Endpoint+history — not wallet OFAC/simulation. Optional deeper signal: GET /preflight/deep ($${DEEP_CHECK_PRICE_USD}).`,
       mimeType: "application/json",
       serviceName,
       tags,
@@ -972,6 +1005,243 @@ app.post("/watch/renew", async (c) => {
   });
 });
 
+
+/** Public explain page — no scan numbers, no per-endpoint data. */
+app.get("/scan", (c) =>
+  c.html(scanExplainHtml(originOf(c), unit(c.env)), 200, {
+    "Cache-Control": "public, max-age=300",
+  }),
+);
+
+app.get("/owner", (c) =>
+  c.html(ownerDashboardHtml(originOf(c), unit(c.env)), 200, {
+    "Cache-Control": "public, max-age=120",
+  }),
+);
+
+/** One free regular check ever per wallet — challenge. */
+app.get("/preflight/free/challenge", async (c) => {
+  const address = c.req.query("address") || "";
+  const issued = await issueFreeChallenge(c.env, {
+    address,
+    origin: originOf(c),
+    clientIp: clientIp(c),
+  });
+  if (!issued.ok) {
+    return c.json(
+      {
+        error: issued.error,
+        message:
+          issued.error === "already_used"
+            ? "This wallet already used its one free regular check."
+            : issued.error === "rate_limited"
+              ? "Too many challenge requests. Try later."
+              : "Could not issue challenge.",
+      },
+      issued.status as 400,
+    );
+  }
+  return c.json({
+    ...issued.challenge,
+    how:
+      "Sign challenge.message with the wallet (EIP-191 personal_sign; ERC-1271 ok). Then POST /preflight/free with {url, address, nonce, signature}. One free regular check ever per wallet — not deep/batch.",
+  });
+});
+
+/** Redeem the one free regular check. */
+app.post("/preflight/free", async (c) => {
+  let body: Record<string, unknown> = {};
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid_json" }, 400);
+  }
+  const address = String(body.address || c.req.header("X-Free-Check-Address") || "");
+  const nonce = String(body.nonce || c.req.header("X-Free-Check-Nonce") || "");
+  const signature = String(
+    body.signature || c.req.header("X-Free-Check-Signature") || "",
+  );
+  const url = String(body.url || "");
+  const redeemed = await redeemFreeCheck(c.env, {
+    origin: originOf(c),
+    clientIp: clientIp(c),
+    address,
+    nonce,
+    signature,
+    url,
+  });
+  if (!redeemed.ok) {
+    return c.json(
+      {
+        error: redeemed.error,
+        message: redeemed.message || redeemed.error,
+        pay: {
+          endpoint: "/preflight",
+          priceUsd: unit(c.env),
+          note: "Pay Exact USDC on Base for further regular checks.",
+        },
+      },
+      redeemed.status as 400,
+    );
+  }
+  await recordCheckStats(c.env.PAYTO_HISTORY, {
+    verdict: redeemed.result.verdict,
+    paid: false,
+    isNewTool: redeemed.result.history.checks === 1,
+  });
+  return c.json(redeemed.result);
+});
+
+/** Owner: start verification challenge. */
+app.post("/owner/challenge", async (c) => {
+  let body: { url?: unknown } = {};
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid_json" }, 400);
+  }
+  const url = typeof body.url === "string" ? body.url : "";
+  const issued = await issueOwnerChallenge(c.env, {
+    url,
+    origin: originOf(c),
+    clientIp: clientIp(c),
+  });
+  if (!issued.ok) {
+    return c.json({ error: issued.error }, issued.status as 400);
+  }
+  return c.json(issued.challenge);
+});
+
+app.post("/owner/verify", async (c) => {
+  let body: { challengeId?: unknown; signature?: unknown } = {};
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid_json" }, 400);
+  }
+  const out = await verifyOwnerPayTo(c.env, {
+    origin: originOf(c),
+    clientIp: clientIp(c),
+    challengeId: String(body.challengeId || ""),
+    signature: String(body.signature || ""),
+    sessionToken: bearerToken(c),
+  });
+  if (!out.ok) return c.json({ error: out.error }, out.status as 400);
+  return c.json({
+    ok: true,
+    sessionToken: out.sessionToken,
+    url: out.url,
+    dashboard: "/owner/dashboard",
+  });
+});
+
+app.post("/owner/verify-dns", async (c) => {
+  let body: { challengeId?: unknown; method?: unknown } = {};
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid_json" }, 400);
+  }
+  const method = body.method === "dns" ? "dns" : "wellknown";
+  const out = await verifyOwnerDnsOrWellKnown(c.env, {
+    clientIp: clientIp(c),
+    challengeId: String(body.challengeId || ""),
+    method,
+    sessionToken: bearerToken(c),
+  });
+  if (!out.ok) return c.json({ error: out.error }, out.status as 400);
+  return c.json({
+    ok: true,
+    sessionToken: out.sessionToken,
+    url: out.url,
+    dashboard: "/owner/dashboard",
+  });
+});
+
+app.get("/owner/dashboard", async (c) => {
+  const out = await ownerDashboard(c.env, {
+    sessionToken: bearerToken(c) || "",
+    origin: originOf(c),
+  });
+  if (!out.ok) return c.json({ error: out.error }, out.status as 401);
+  // Fix upsell paidCheck with real unit price
+  const u = unit(c.env);
+  const endpoints = out.endpoints.map((ep) => ({
+    ...ep,
+    upsells: {
+      ...ep.upsells,
+      paidCheck: `GET ${originOf(c)}/preflight?url=… — $${u} live check (not a snapshot).`,
+    },
+  }));
+  return c.json(
+    {
+      endpoints,
+      note:
+        "Snapshots are periodic and private to verified owners. Live agent verification requires paid /preflight.",
+    },
+    200,
+    { "Cache-Control": "no-store" },
+  );
+});
+
+app.post("/owner/badge", async (c) => {
+  let body: { url?: unknown } = {};
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid_json" }, 400);
+  }
+  const out = await optInBadge(c.env, {
+    sessionToken: bearerToken(c) || "",
+    url: String(body.url || ""),
+  });
+  if (!out.ok) return c.json({ error: out.error }, out.status as 400);
+  const origin = originOf(c);
+  return c.json({
+    badgeId: out.badgeId,
+    embedPath: out.embedPath,
+    embedUrl: `${origin}${out.embedPath}`,
+    snippet: badgeEmbedSnippet(origin, out.badgeId),
+    note: "Badge serves useful SVG only while opted-in and latest snapshot is pass.",
+  });
+});
+
+app.delete("/owner/badge", async (c) => {
+  let body: { url?: unknown } = {};
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid_json" }, 400);
+  }
+  const out = await revokeBadge(c.env, {
+    sessionToken: bearerToken(c) || "",
+    url: String(body.url || ""),
+  });
+  if (!out.ok) return c.json({ error: out.error }, out.status as 400);
+  return c.json({ ok: true, revoked: true });
+});
+
+/** Public badge image — unguessable id; empty 404 otherwise. */
+app.get("/badge/:id", async (c) => {
+  const id = c.req.param("id") || "";
+  const rendered = await renderPublicBadge(c.env, {
+    badgeId: id,
+    origin: originOf(c),
+    clientIp: clientIp(c),
+  });
+  return new Response(rendered.body, {
+    status: rendered.status,
+    headers: {
+      "Content-Type": rendered.contentType,
+      "Cache-Control":
+        rendered.status === 200
+          ? "public, max-age=300"
+          : "public, max-age=60",
+      "Access-Control-Allow-Origin": "*",
+    },
+  });
+});
+
 app.notFound((c) => {
   if (c.req.header("accept")?.includes("text/html")) {
     return c.html(
@@ -996,9 +1266,12 @@ export default {
     ctx: ExecutionContext,
   ) {
     ctx.waitUntil(
-      runWatchCron(env).then((s) => {
-        console.log("watch-cron", JSON.stringify(s));
-      }),
+      (async () => {
+        const watch = await runWatchCron(env);
+        console.log("watch-cron", JSON.stringify(watch));
+        const scan = await runScanCron(env);
+        console.log("scan-cron", JSON.stringify(scan));
+      })(),
     );
   },
 };
