@@ -49,7 +49,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "x402check-client": "^0.1.1"
+    "x402check-client": "^0.1.4"
   },
   "peerDependencies": {
     "@langchain/core": ">=0.3.0",
