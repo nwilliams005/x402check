@@ -68,13 +68,18 @@ import {
   INDEXNOW_KEY,
   agentCard,
   agentJson,
+  agentSkillsIndex,
+  agentsMarkdown,
   aiCatalog,
   exampleToolCheck,
   mcpServerCardLegacy,
   mcpServerCardSep,
   paymentRequiredBody,
+  preflightSkillMarkdown,
   robotsTxt,
   sitemapXml,
+  skillsJson,
+  skillsMarkdown,
   x402WellKnown,
 } from "./discovery";
 import { handleMcp } from "./mcp";
@@ -292,6 +297,35 @@ app.get("/llms.txt", (c) =>
 app.get("/llms-full.txt", (c) =>
   c.text(llmsFullTxt(originOf(c), unit(c.env)), 200, {
     "Content-Type": "text/plain; charset=utf-8",
+    "Cache-Control": "public, max-age=300",
+  }),
+);
+
+app.get("/AGENTS.md", (c) =>
+  c.text(agentsMarkdown(originOf(c), unit(c.env)), 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    "Cache-Control": "public, max-age=300",
+  }),
+);
+
+app.get("/skills.md", (c) =>
+  c.text(skillsMarkdown(originOf(c), unit(c.env)), 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    "Cache-Control": "public, max-age=300",
+  }),
+);
+
+app.get("/.well-known/skills.json", (c) =>
+  cacheJson(c, skillsJson(originOf(c), unit(c.env))),
+);
+
+app.get("/.well-known/agent-skills/index.json", (c) =>
+  cacheJson(c, agentSkillsIndex(originOf(c), unit(c.env))),
+);
+
+app.get("/.well-known/agent-skills/x402-preflight/SKILL.md", (c) =>
+  c.text(preflightSkillMarkdown(originOf(c), unit(c.env)), 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
     "Cache-Control": "public, max-age=300",
   }),
 );

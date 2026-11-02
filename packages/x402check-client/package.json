@@ -1,7 +1,7 @@
 {
   "name": "x402check-client",
-  "version": "0.1.4",
-  "description": "Call x402check before any x402 payment \u2014 trust-check seller URLs (ok|caution|avoid) with payTo, uptime, and price/wallet history.",
+  "version": "0.1.5",
+  "description": "Call x402check before any x402 payment \u2014 wrapFetch / axios interceptor + preflight (ok|caution|avoid). Opt-in; pays x402check $0.01 (1 free/wallet).",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
@@ -28,7 +28,10 @@
     "x402check",
     "check-before-paying",
     "is-this-api-a-scam",
-    "before-payment"
+    "before-payment",
+    "wrapFetch",
+    "axios-interceptor",
+    "auto-preflight"
   ],
   "homepage": "https://x402check.dev",
   "bugs": {
@@ -38,5 +41,8 @@
   "license": "MIT",
   "engines": {
     "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
   }
 }

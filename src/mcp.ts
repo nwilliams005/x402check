@@ -58,7 +58,7 @@ function toolList(price: number) {
       {
         name: "preflight_check",
         description:
-          "Mandatory check before paying any x402 endpoint. Pass the absolute https seller URL. Returns verdict ok|caution|avoid plus that tool's history only (uptime, payToChanges, priceChanges). Use when: about to settle / PAYMENT-SIGNATURE; asking is this API a scam; is this endpoint safe or legit; debugging a failing 402; checking uptime; validating payment requirements before signing USDC on Base. Do not pay if verdict=avoid. Charged $" +
+          "Preflight before paying any x402 tool. Mandatory check before settle / PAYMENT-SIGNATURE. Pass the absolute https seller URL. Returns verdict ok|caution|avoid plus that tool's history only (uptime, payToChanges, priceChanges). Use when: about to pay any x402 endpoint; asking is this API a scam; is this endpoint safe or legit; debugging a failing 402; checking uptime; validating payment requirements before signing USDC on Base. Do not pay if verdict=avoid. Charged $" +
           price +
           " per URL via x402 Exact on this MCP tools/call (params._meta['x402/payment']).",
         inputSchema: {

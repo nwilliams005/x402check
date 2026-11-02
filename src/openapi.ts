@@ -50,7 +50,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
         url: origin,
       },
       "x-guidance":
-        "Always call GET /preflight?url=SELLER_URL (or POST batch) before PAYMENT-SIGNATURE to that seller — check before paying. " +
+        "Preflight before paying any x402 tool: always call GET /preflight?url=SELLER_URL (or POST batch) before PAYMENT-SIGNATURE to that seller. " +
         "Deny payment when verdict=avoid; escalate when caution; still enforce your maxAmount when ok. " +
         `Unit price $${unit} USDC Exact on Base (eip155:8453), billed per tool URL. One free regular check ever per wallet via /preflight/free (not deep/batch; not a scan substitute). ` +
         "Use when: is this API a scam; is this x402 endpoint safe; verify payTo; detect rug-style payTo/price swaps; check uptime; " +
@@ -69,6 +69,9 @@ export function openApiSpec(origin: string, pricePerTool: number) {
         agentCard: `${origin}/.well-known/agent-card.json`,
         aiCatalog: `${origin}/.well-known/ai-catalog.json`,
         mcpServerCard: `${origin}/mcp/server-card`,
+        agents: `${origin}/AGENTS.md`,
+        skills: `${origin}/skills.md`,
+        skillsJson: `${origin}/.well-known/skills.json`,
         stats: `${origin}/stats`,
       },
       "x-keywords": [
@@ -1024,7 +1027,7 @@ export function mcpDescriptor(origin: string, pricePerTool: number) {
       },
     ],
     adoptionHints: [
-      "Use npm x402check-client to auto-call preflight before any x402 pay.",
+      "Use npm x402check-client (preflight, opt-in wrapFetch / createAxiosRequestInterceptor) to auto-call preflight before paying any x402 tool. Those helpers pay x402check ($0.01 after 1 free check/wallet).",
       "Default-on in agent runtimes with PREFLIGHT_URL + kill-switch env.",
       "List on CDP Bazaar via successful settle + declareDiscoveryExtension (no discoverable:true).",
       "Register origin on x402scan; submit to 402 Index / x402dash / x402-trust.",

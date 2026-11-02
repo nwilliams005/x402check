@@ -2,7 +2,7 @@
 
 MCP stdio bridge to the remote [x402check](https://x402check.dev) HTTP/MCP endpoint.
 
-**Check before paying** any x402 seller URL: verdict `ok|caution|avoid` + history (uptime, payTo/price changes).
+**Preflight before paying any x402 tool.** Check any x402 seller URL: verdict `ok|caution|avoid` + history (uptime, payTo/price changes).
 
 Answers agent prompts like *is this API a scam?*, *is this x402 endpoint safe?*, *verify payTo before signing*, *check before paying*.
 

@@ -33,7 +33,7 @@ const agent = {
 | `X402CHECK_URL` | `https://x402check.dev` | Worker origin |
 | `X402CHECK_SKIP` | `0` | `1` = kill-switch |
 
-Paid **$0.01 USDC Exact per tool URL** on Base. Optional deep check **$0.05**. No free tier. See https://x402check.dev/llms.txt
+Paid **$0.01 USDC Exact per tool URL** on Base after **1 free regular check per wallet**. Optional deep check **$0.05**. See https://x402check.dev/llms.txt
 
 ## Not
 
