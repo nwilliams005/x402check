@@ -291,14 +291,10 @@ export type WatchAlertPayload = {
 };
 
 export function formatBaselineLine(b: WatchBaseline): string {
-  const pay = b.payTo || "(none)";
+  const pay = shortenAddress(b.payTo) || "(none)";
   const price = b.priceUsd == null ? "(unknown)" : `$${b.priceUsd}`;
   const net = b.network || "(none)";
-  const avail = b.reachable
-    ? b.is402
-      ? "reachable+402"
-      : "reachable"
-    : "unreachable";
+  const avail = availabilityLabel(b);
   return `payTo=${pay} price=${price} network=${net} availability=${avail} verdict=${b.verdict}`;
 }
 
@@ -308,6 +304,166 @@ function escapeHtml(s: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/** e.g. Nov 2, 2026, 12:44 PM UTC */
+export function formatWatchTimeUtc(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+  const month = months[d.getUTCMonth()];
+  const day = d.getUTCDate();
+  const year = d.getUTCFullYear();
+  let h = d.getUTCHours();
+  const m = d.getUTCMinutes();
+  const ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12;
+  if (h === 0) h = 12;
+  const mm = m.toString().padStart(2, "0");
+  return `${month} ${day}, ${year}, ${h}:${mm} ${ampm} UTC`;
+}
+
+/** 0x0000…0001 — empty/null → "" */
+export function shortenAddress(addr: string | null | undefined): string {
+  if (!addr) return "";
+  const a = addr.trim();
+  if (a.length < 12) return a;
+  return `${a.slice(0, 6)}…${a.slice(-4)}`;
+}
+
+function availabilityLabel(b: WatchBaseline): string {
+  if (!b.reachable) return "unreachable";
+  return b.is402 ? "reachable+402" : "reachable";
+}
+
+function fieldValues(b: WatchBaseline): {
+  payTo: string;
+  price: string;
+  network: string;
+  availability: string;
+  verdict: string;
+} {
+  return {
+    payTo: b.payTo || "(none)",
+    price: b.priceUsd == null ? "(unknown)" : `$${b.priceUsd}`,
+    network: b.network || "(none)",
+    availability: availabilityLabel(b),
+    verdict: b.verdict,
+  };
+}
+
+type CompareRow = {
+  key: string;
+  label: string;
+  before: string;
+  after: string;
+  changed: boolean;
+};
+
+function compareRows(before: WatchBaseline, after: WatchBaseline): CompareRow[] {
+  const b = fieldValues(before);
+  const a = fieldValues(after);
+  const rows: Array<{ key: keyof typeof b; label: string }> = [
+    { key: "payTo", label: "payTo" },
+    { key: "price", label: "price" },
+    { key: "network", label: "network" },
+    { key: "availability", label: "availability" },
+    { key: "verdict", label: "verdict" },
+  ];
+  return rows.map(({ key, label }) => ({
+    key,
+    label,
+    before: b[key],
+    after: a[key],
+    changed: b[key] !== a[key],
+  }));
+}
+
+function displayValue(key: string, raw: string): string {
+  if (key === "payTo" && raw.startsWith("0x") && raw.length >= 12) {
+    return shortenAddress(raw);
+  }
+  return raw;
+}
+
+function formatCompareText(rows: CompareRow[]): string {
+  const lines = ["Field          Before              After"];
+  lines.push("-".repeat(52));
+  for (const r of rows) {
+    const mark = r.changed ? "*" : " ";
+    const before = displayValue(r.key, r.before);
+    const after = displayValue(r.key, r.after);
+    lines.push(
+      `${mark}${r.label.padEnd(13)} ${before.padEnd(18)} ${after}${r.changed ? "  (changed)" : ""}`,
+    );
+  }
+  for (const r of rows) {
+    if (r.key !== "payTo") continue;
+    const shortEnough =
+      (r.before.startsWith("0x") && r.before.length >= 12) ||
+      (r.after.startsWith("0x") && r.after.length >= 12);
+    if (!shortEnough) continue;
+    if (r.before === r.after) {
+      lines.push(`  payTo (full): ${r.after}`);
+    } else {
+      if (r.before.startsWith("0x") && r.before.length >= 12) {
+        lines.push(`  payTo before (full): ${r.before}`);
+      }
+      if (r.after.startsWith("0x") && r.after.length >= 12) {
+        lines.push(`  payTo after (full):  ${r.after}`);
+      }
+    }
+  }
+  return lines.join("\n");
+}
+
+function formatCompareHtml(rows: CompareRow[]): string {
+  const body = rows
+    .map((r) => {
+      const bg = r.changed ? "background:#fff7e6;" : "";
+      const weight = r.changed ? "font-weight:600;" : "";
+      const beforeShow = displayValue(r.key, r.before);
+      const afterShow = displayValue(r.key, r.after);
+      const beforeTitle =
+        r.key === "payTo" && r.before.startsWith("0x")
+          ? ` title="${escapeHtml(r.before)}"`
+          : "";
+      const afterTitle =
+        r.key === "payTo" && r.after.startsWith("0x")
+          ? ` title="${escapeHtml(r.after)}"`
+          : "";
+      const fullPay =
+        r.key === "payTo" &&
+        ((r.before.startsWith("0x") && r.before.length >= 12) ||
+          (r.after.startsWith("0x") && r.after.length >= 12))
+          ? `<div style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;color:#666;word-break:break-all;margin-top:4px">${
+              r.before === r.after
+                ? escapeHtml(r.after)
+                : `before: ${escapeHtml(r.before)}<br/>after: ${escapeHtml(r.after)}`
+            }</div>`
+          : "";
+      return `<tr style="${bg}">
+  <td style="padding:8px 10px;border-bottom:1px solid #e8e8e8;${weight}">${escapeHtml(r.label)}${r.changed ? ' <span style="color:#b45309;font-size:11px">changed</span>' : ""}</td>
+  <td style="padding:8px 10px;border-bottom:1px solid #e8e8e8;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px"${beforeTitle}>${escapeHtml(beforeShow)}</td>
+  <td style="padding:8px 10px;border-bottom:1px solid #e8e8e8;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px"${afterTitle}>${escapeHtml(afterShow)}</td>
+</tr>${fullPay ? `<tr style="${bg}"><td colspan="3" style="padding:0 10px 8px;border-bottom:1px solid #e8e8e8">${fullPay}</td></tr>` : ""}`;
+    })
+    .join("\n");
+  return `<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;max-width:560px;font-size:14px;color:#111">
+<thead>
+<tr>
+  <th align="left" style="padding:8px 10px;border-bottom:2px solid #ddd;font-size:12px;color:#555">Field</th>
+  <th align="left" style="padding:8px 10px;border-bottom:2px solid #ddd;font-size:12px;color:#555">Before</th>
+  <th align="left" style="padding:8px 10px;border-bottom:2px solid #ddd;font-size:12px;color:#555">After</th>
+</tr>
+</thead>
+<tbody>
+${body}
+</tbody>
+</table>`;
 }
 
 /**
@@ -327,33 +483,41 @@ export async function sendWatchEmail(
   const changeList = payload.changes.join(", ");
   const subject = `x402check watch alert: ${changeList}`;
   const statusUrl = `https://x402check.dev/watch?id=${payload.watchId}`;
+  const checkedHuman = formatWatchTimeUtc(payload.checkedAt);
+  const expiresHuman = formatWatchTimeUtc(payload.expiresAt);
+  const rows = compareRows(payload.baseline, payload.current);
+  const compareText = formatCompareText(rows);
   const textBody = [
     "x402check detected a change on a watched x402 seller.",
     "",
     `URL: ${payload.url}`,
     `Changes: ${changeList}`,
-    `Checked at: ${payload.checkedAt}`,
-    `Watch expires: ${payload.expiresAt}`,
+    `Checked at: ${checkedHuman}`,
+    `  (${payload.checkedAt})`,
+    `Watch expires: ${expiresHuman}`,
+    `  (${payload.expiresAt})`,
     "",
-    `Before: ${formatBaselineLine(payload.baseline)}`,
-    `After:  ${formatBaselineLine(payload.current)}`,
+    "Before → After",
+    compareText,
     "",
     `Status: ${statusUrl}`,
     `Docs: ${payload.docs}`,
     "",
     "This is a transactional alert for your paid $5 / 30-day watch.",
   ].join("\n");
-  const html = `<p>x402check detected a change on a watched x402 seller.</p>
-<ul>
-<li><strong>URL:</strong> ${escapeHtml(payload.url)}</li>
-<li><strong>Changes:</strong> ${escapeHtml(changeList)}</li>
-<li><strong>Checked at:</strong> ${escapeHtml(payload.checkedAt)}</li>
-<li><strong>Watch expires:</strong> ${escapeHtml(payload.expiresAt)}</li>
-</ul>
-<p><strong>Before:</strong> <code>${escapeHtml(formatBaselineLine(payload.baseline))}</code><br/>
-<strong>After:</strong> <code>${escapeHtml(formatBaselineLine(payload.current))}</code></p>
-<p><a href="${escapeHtml(statusUrl)}">Watch status</a> · <a href="${escapeHtml(payload.docs)}">Docs</a></p>
-<p style="color:#666;font-size:12px">Transactional alert for your paid $5 / 30-day watch.</p>`;
+  const html = `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.45;color:#111;max-width:600px">
+<p style="margin:0 0 12px">x402check detected a change on a watched x402 seller.</p>
+<p style="margin:0 0 8px"><strong>URL:</strong> <a href="${escapeHtml(payload.url)}">${escapeHtml(payload.url)}</a></p>
+<p style="margin:0 0 8px"><strong>Changes:</strong> ${escapeHtml(changeList)}</p>
+<p style="margin:0 0 4px"><strong>Checked at:</strong> ${escapeHtml(checkedHuman)}</p>
+<p style="margin:0 0 8px;font-size:12px;color:#666">${escapeHtml(payload.checkedAt)}</p>
+<p style="margin:0 0 4px"><strong>Watch expires:</strong> ${escapeHtml(expiresHuman)}</p>
+<p style="margin:0 0 16px;font-size:12px;color:#666">${escapeHtml(payload.expiresAt)}</p>
+<p style="margin:0 0 8px"><strong>Before → After</strong></p>
+${formatCompareHtml(rows)}
+<p style="margin:16px 0 8px"><a href="${escapeHtml(statusUrl)}">Watch status</a> · <a href="${escapeHtml(payload.docs)}">Docs</a></p>
+<p style="margin:0;color:#666;font-size:12px">Transactional alert for your paid $5 / 30-day watch.</p>
+</div>`;
   try {
     const r = await fetch("https://api.resend.com/emails", {
       method: "POST",
