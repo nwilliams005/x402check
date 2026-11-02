@@ -4,7 +4,7 @@ Rule: docs PRs may be opened if focused and useful. Cold emails stay drafts unti
 
 ---
 
-## A. Coinbase / x402 Foundation docs (PR path) · OPENING PR
+## A. Coinbase / x402 Foundation docs (PR path) · OPENED
 
 **Repos:** https://github.com/coinbase/x402 (docs under `docs/`)
 **Best edit:** add x402check to `docs/dev-tools/third-party-extensions.md` (or third-party tools table) as a buyer-side preflight, plus a short "check live 402 before paying" note in `docs/getting-started/quickstart-for-buyers.mdx` if the PR stays small.
@@ -96,3 +96,4 @@ https://x402check.dev
 ## Opened PR
 
 - x402 Foundation third-party utilities: https://github.com/x402-foundation/x402/pull/4108
+- PayAI buyer docs (live 402 before funds): https://github.com/PayAINetwork/docs/pull/115

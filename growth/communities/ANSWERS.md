@@ -28,7 +28,7 @@ I built a small preflight for this (live 402 + history → ok/caution/avoid) at 
 
 Curious what others use for allowlists today.
 
- ·  Nicklaus Williams
+Nicklaus Williams
 
 ---
 

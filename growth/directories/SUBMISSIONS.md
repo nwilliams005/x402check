@@ -94,7 +94,7 @@ Shared facts for forms:
 **Path:** No submit form. Public repo + topic `gemini-cli-extension` + root `gemini-extension.json`. Crawled daily. Docs: https://geminicli.com/docs/extensions/releasing/
 **Prepared `gemini-extension.json`:** see repo root after commit.
 **Install for users:** `gemini extensions install https://github.com/nwilliams005/x402check`
-**Status:** Manifest + topic can be applied via git/gh without a browser form.
+**Status:** DONE. `gemini-extension.json` on mainline branch; topic `gemini-cli-extension` present on https://github.com/nwilliams005/x402check
 
 ---
 
