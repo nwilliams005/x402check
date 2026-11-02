@@ -1,7 +1,7 @@
 {
   "name": "plugin-x402check",
-  "version": "0.1.2",
-  "description": "ElizaOS plugin for x402check \u2014 preflight x402 seller endpoints (ok|caution|avoid + history) before an agent pays. $0.002 Exact USDC on Base \u2014 check before paying; is this API a scam/safe.",
+  "version": "0.1.3",
+  "description": "ElizaOS plugin for x402check \u2014 preflight x402 seller endpoints (ok|caution|avoid + history) before an agent pays. $0.01 Exact USDC on Base \u2014 check before paying; is this API a scam/safe.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {

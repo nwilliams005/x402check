@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "x402check-langchain"
-version = "0.1.1"
+version = "0.1.2"
 description = "LangChain tools for x402check — check before paying any x402 endpoint; is this API a scam/safe (ok|caution|avoid + history)."
 readme = "README.md"
 requires-python = ">=3.10"

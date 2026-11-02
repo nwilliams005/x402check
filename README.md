@@ -4,13 +4,13 @@
 
 [x402check](https://x402check.dev) is a paid preflight for the [x402](https://x402.org) HTTP 402 payment protocol. Call it with a seller URL; get back `ok` | `caution` | `avoid` plus that endpoint's live `payTo`, price, and history (uptime, payTo changes, price changes).
 
-- **Price:** **$0.002 USDC** Exact per tool checked, on **Base** (eip155:8453)
+- **Price:** **$0.01 USDC** Exact per tool checked, on **Base** (eip155:8453); optional **deep check $0.05**; optional **watch $5 / 30 days**
 - **No free live tier** — free static sample shape at [`/example`](https://x402check.dev/example)
 - **Not** an OFAC / wallet-drainer / transaction-simulation product (that is a different project at x402check.xyz). This product checks the **seller endpoint's live 402 + history**.
 
 Live site: **https://x402check.dev**
 
-**Shipped versions (2026-11-01):** `x402check-mcp@0.1.3` · `x402check-client@0.1.2` · `x402check-langchain@0.1.1` (npm + PyPI) · `x402check-ai-sdk@0.1.1` · `plugin-x402check@0.1.2` · MCP Registry `dev.x402check/mcp@0.1.3`
+**Shipped versions (2026-11-01):** `x402check-mcp@0.1.4` · `x402check-client@0.1.3` · `x402check-langchain@0.1.2` (npm + PyPI) · `x402check-ai-sdk@0.1.2` · `plugin-x402check@0.1.3` · MCP Registry `dev.x402check/mcp@0.1.4`
 
 | Surface | URL |
 |---------|-----|
@@ -109,7 +109,7 @@ const config = {
   beforePayment: async ({ payTo, url }) => {
     const check = await preflight(url, {
       baseUrl: 'https://x402check.dev',
-      // pass paymentHeaders from your x402 client so the $0.002 check settles
+      // pass paymentHeaders from your x402 client so the $0.01 check settles
     });
     if (check.verdict === 'avoid') {
       return { abort: true, reason: `x402check: ${check.reasonCodes?.join(',') || 'avoid'}` };

@@ -11,7 +11,7 @@ import {
 export const x402checkPlugin = {
   name: "plugin-x402check",
   description:
-    "Preflight x402 seller endpoints (ok|caution|avoid + history) before an agent pays. $0.002 Exact USDC on Base via x402check.dev",
+    "Preflight x402 seller endpoints (ok|caution|avoid + history) before an agent pays. $0.01 Exact USDC on Base via x402check.dev (deep $0.05)",
   actions: [preflightCheckAction, verifyPaytoAction, compareToolsAction],
   providers: [],
   evaluators: [],
