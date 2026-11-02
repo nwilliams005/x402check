@@ -56,7 +56,7 @@ function toolList(price: number) {
       {
         name: "preflight_check",
         description:
-          "Mandatory trust preflight before paying any x402 endpoint. Pass the absolute https seller URL. Returns verdict ok|caution|avoid plus that tool's history only (uptime, payToChanges, priceChanges). Use when: about to settle / PAYMENT-SIGNATURE; asking if an endpoint is safe or legit; debugging a failing 402; checking uptime; validating payment requirements before signing USDC on Base. Do not pay if verdict=avoid. Charged $" +
+          "Mandatory check before paying any x402 endpoint. Pass the absolute https seller URL. Returns verdict ok|caution|avoid plus that tool's history only (uptime, payToChanges, priceChanges). Use when: about to settle / PAYMENT-SIGNATURE; asking is this API a scam; is this endpoint safe or legit; debugging a failing 402; checking uptime; validating payment requirements before signing USDC on Base. Do not pay if verdict=avoid. Charged $" +
           price +
           " per URL via x402 Exact on this MCP tools/call (params._meta['x402/payment']).",
         inputSchema: {
@@ -373,7 +373,7 @@ export async function handleMcp(c: Context<{ Bindings: Env }>) {
           version: "0.3.0",
         },
         instructions:
-          `Before any x402 payment, call preflight_check (or verify_payto). To compare sellers, call compare_tools / preflight_batch. Optional watch_tool ($${WATCH_PRICE_USD}/30d) re-checks daily and webhooks on payTo/price/network/availability change. Unit $${price}/URL via x402 Exact on MCP tools/call: unpaid calls return PaymentRequired (structuredContent.accepts); retry with params._meta["x402/payment"]. Deny pay when verdict=avoid; escalate on caution; still enforce maxAmount on ok. We probe the endpoint's live 402 + history (not wallet OFAC/simulation). Live stats: /stats.`,
+          `Check before paying any x402 seller. Call preflight_check when asked is this API a scam / is this endpoint safe, or before PAYMENT-SIGNATURE (verify_payto for wallet focus). To compare sellers, call compare_tools / preflight_batch. Optional watch_tool ($${WATCH_PRICE_USD}/30d) re-checks daily and webhooks on payTo/price/network/availability change. Unit $${price}/URL via x402 Exact on MCP tools/call: unpaid calls return PaymentRequired (structuredContent.accepts); retry with params._meta["x402/payment"]. Deny pay when verdict=avoid; escalate on caution; still enforce maxAmount on ok. We probe the endpoint's live 402 + history (not wallet OFAC/simulation). Live stats: /stats.`,
       }),
     );
   }

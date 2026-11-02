@@ -1,5 +1,17 @@
 {
   "name": "x402check",
-  "description": "Trust-check x402 seller URLs before paying. Returns ok|caution|avoid + history.",
-  "category": "security"
+  "description": "Check before paying x402 seller URLs. Is this API a scam / endpoint safe? ok|caution|avoid + history. Verify payTo, compare tools, budget guard.",
+  "category": "security",
+  "keywords": [
+    "x402",
+    "preflight",
+    "scam-check",
+    "check-before-paying",
+    "verify-payto",
+    "ai-agent",
+    "mcp",
+    "base",
+    "usdc",
+    "budget-guard"
+  ]
 }

@@ -48,9 +48,10 @@ function headTags(opts: {
   <meta property="og:url" content="${canonical}" />
   <meta property="og:image" content="${opts.origin}/assets/icon.svg" />
   <meta name="twitter:card" content="summary" />
+  <meta name="twitter:site" content="@x402checkdev" />
   <meta name="twitter:title" content="${opts.title}" />
   <meta name="twitter:description" content="${opts.description}" />
-  <meta name="keywords" content="x402, x402check, verify payTo, is this x402 endpoint safe, agent trust, preflight, USDC, Base, MCP, AI agent tools, uptime, price drift, budget guard, compare x402 tools" />
+  <meta name="keywords" content="x402, x402check, check before paying, is this API a scam, is this x402 endpoint safe, verify payTo, agent trust, preflight, USDC, Base, MCP, AI agent tools, uptime, price drift, budget guard, compare x402 tools" />
   <link rel="stylesheet" href="/assets/style.css" />${jsonLd}`;
 }
 
@@ -59,18 +60,22 @@ function softwareJsonLd(origin: string, pricePerTool: number) {
     "@context": "https://schema.org",
     "@graph": [
       {
+        "@type": "Organization",
+        "@id": `${origin}/#org`,
+        name: "x402check",
+        url: origin,
+        sameAs: ["https://x.com/x402checkdev", "https://github.com/nwilliams005/x402check"],
+        logo: `${origin}/assets/icon.svg`,
+      },
+      {
         "@type": "WebAPI",
         name: "x402check",
         description:
-          "Paid per-tool trust preflight before an AI agent pays an x402 endpoint. Verify payTo, detect price/wallet drift, check uptime, compare sellers, budget guard.",
+          "Check before paying any x402 API. Paid per-tool trust preflight for AI agents: is this API a scam/legit, verify payTo, detect price/wallet drift, check uptime, compare sellers, budget guard.",
         url: origin,
         documentation: `${origin}/docs`,
         termsOfService: `${origin}/docs`,
-        provider: {
-          "@type": "Organization",
-          name: "x402check",
-          url: origin,
-        },
+        provider: { "@id": `${origin}/#org` },
         offers: {
           "@type": "Offer",
           price: String(pricePerTool),
@@ -85,12 +90,36 @@ function softwareJsonLd(origin: string, pricePerTool: number) {
         operatingSystem: "Any",
         url: origin,
         description:
-          "x402 trust preflight for AI agents. Endpoint live 402 + history (not wallet OFAC/simulation).",
+          "x402 trust preflight for AI agents — check before paying. Endpoint live 402 + history (not wallet OFAC/simulation).",
         offers: {
           "@type": "Offer",
           price: String(pricePerTool),
           priceCurrency: "USD",
         },
+        author: { "@id": `${origin}/#org` },
+      },
+      {
+        "@type": "HowTo",
+        name: "Check an x402 API before paying",
+        description:
+          "How an AI agent or developer checks whether an x402 seller URL is safe to pay before signing USDC on Base.",
+        step: [
+          {
+            "@type": "HowToStep",
+            name: "Call preflight",
+            text: `GET ${origin}/preflight?url=SELLER_URL (or MCP preflight_check). Pay $${pricePerTool} USDC Exact on Base.`,
+          },
+          {
+            "@type": "HowToStep",
+            name: "Read the verdict",
+            text: "avoid → do not pay. caution → escalate. ok → still enforce your maxAmount and allowlist.",
+          },
+          {
+            "@type": "HowToStep",
+            name: "Verify payTo and drift",
+            text: "Confirm ToolCheck.payTo, and inspect history.payToChanges / history.priceChanges before signing.",
+          },
+        ],
       },
       {
         "@type": "FAQPage",
@@ -101,6 +130,22 @@ function softwareJsonLd(origin: string, pricePerTool: number) {
             acceptedAnswer: {
               "@type": "Answer",
               text: `Call GET ${origin}/preflight?url=SELLER (pay $${pricePerTool} USDC). verdict=avoid means do not pay; caution means escalate; ok still requires your maxAmount check. Endpoint+history signals — not a legal scam ruling.`,
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Is this API a scam?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: `x402check does not issue a legal scam label. It checks the seller URL's live 402 challenge and history (reachability, payTo, price, drift). Use GET ${origin}/preflight?url=… before paying; deny on avoid. Live honest counts: ${origin}/stats.`,
+            },
+          },
+          {
+            "@type": "Question",
+            name: "How do I check before paying an x402 tool?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: `Always call GET ${origin}/preflight?url=SELLER (or MCP preflight_check / npm x402check-client) before PAYMENT-SIGNATURE. Deny on avoid; escalate on caution; still enforce maxAmount on ok.`,
             },
           },
           {
@@ -140,7 +185,7 @@ function softwareJsonLd(origin: string, pricePerTool: number) {
             name: "How much does x402check cost?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: `$${pricePerTool} USDC Exact per tool on Base (eip155:8453). Batch = N × unit in one settlement. No free tier.`,
+              text: `$${pricePerTool} USDC Exact per tool on Base (eip155:8453). Batch = N × unit in one settlement. Optional watch is $5 Exact / 30 days. No free tier. Live usage: ${origin}/stats.`,
             },
           },
         ],
@@ -171,13 +216,13 @@ export function landingHtml(
     </section>`
     : "";
   const description =
-    "Agents pay per tool checked. Compact verdict + history before any x402 payment. Verify payTo, detect price drift, check uptime, compare sellers, budget guard — is this x402 endpoint safe?";
+    "Check before paying any x402 API. Agents get a compact ok|caution|avoid verdict + history. Is this API a scam / endpoint safe? Verify payTo, detect price drift, check uptime, compare sellers, budget guard.";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 ${headTags({
   origin,
-  title: "x402check — pay-per-tool trust preflight for AI agents",
+  title: "x402check — check before paying any x402 API (AI agent trust preflight)",
   description,
   path: "/",
   jsonLd: softwareJsonLd(origin, pricePerTool),
@@ -189,6 +234,7 @@ ${headTags({
     <a class="brand" href="/">x402check</a>
     <nav>
       <a href="/docs">Docs</a>
+      <a href="/stats">Stats</a>
       <a href="/openapi.json">OpenAPI</a>
       <a href="/llms.txt">llms.txt</a>
       <a href="/mcp.json">MCP</a>
@@ -200,7 +246,8 @@ ${headTags({
     <p class="lede">
       Every check is paid. You get that tool’s <strong>verdict</strong> plus its
       <strong>history</strong> (uptime, payTo changes, price changes) — nothing else.
-      Cache-fresh responses target &lt;300&nbsp;ms. Built for agents that need to know
+      Cache-fresh responses target &lt;300&nbsp;ms. Built for agents that need to
+      <em>check before paying</em>, ask <em>is this API a scam</em> /
       <em>is this x402 endpoint safe</em>, <em>verify payTo</em>, detect drift, compare sellers,
       or keep a budget guard before signing USDC on Base.
     </p>
@@ -210,16 +257,24 @@ ${headTags({
       <code class="chip">GET ${origin}/preflight?url=…</code>
     </div>
     <section class="grid">
-      <article class="card"><h3>Per-tool Exact</h3><p>DynamicPrice scales with batch size. One settlement per HTTP request. No free tier.</p></article>
-      <article class="card"><h3>Compact JSON</h3><p>Stable fields: verdict, payTo, priceUsd, reasonCodes, history.</p></article>
-      <article class="card"><h3>History that matters</h3><p>Past checks, uptime %, payTo drift, price moves — for that URL only.</p></article>
-      <article class="card"><h3>Discoverable</h3><p>OpenAPI, llms.txt, MCP (preflight + verify_payto + compare_tools), A2A, Bazaar.</p></article>
+      <article class="card"><h3>Check before paying</h3><p>Call preflight before any PAYMENT-SIGNATURE. avoid → deny. caution → escalate. ok → still enforce maxAmount.</p></article>
+      <article class="card"><h3>Scam / rug signals</h3><p>Live 402 + history: payTo swaps, price hikes, uptime. Not a legal scam ruling — endpoint signals agents can act on.</p></article>
+      <article class="card"><h3>Compact JSON</h3><p>Stable fields: verdict, payTo, priceUsd, reasonCodes, history for that URL only.</p></article>
+      <article class="card"><h3>Discoverable</h3><p>OpenAPI, llms.txt, MCP (preflight + verify_payto + compare_tools + watch_tool), A2A, Bazaar. Live counts at /stats.</p></article>
     </section>
     <section class="faq">
       <h2>Questions agents ask</h2>
       <details open>
         <summary>Is this x402 endpoint safe?</summary>
         <p>Call <code>GET /preflight?url=…</code>. <strong>avoid</strong> → do not pay. <strong>caution</strong> → escalate. <strong>ok</strong> → still enforce your maxAmount. Endpoint+history signals, not a legal scam ruling.</p>
+      </details>
+      <details open>
+        <summary>Is this API a scam?</summary>
+        <p>We do not issue a legal “scam” label. We check the seller URL’s live 402 and history (reachability, payTo, price, drift) so agents can refuse shady pays. Deny on <strong>avoid</strong>. Honest usage: <a href="/stats">/stats</a>.</p>
+      </details>
+      <details>
+        <summary>How do I check before paying?</summary>
+        <p>Always call <code>GET /preflight?url=…</code> (or MCP <code>preflight_check</code> / npm <code>x402check-client</code>) before <code>PAYMENT-SIGNATURE</code>. Policy: avoid→deny, caution→confirm, ok→still enforce maxAmount.</p>
       </details>
       <details>
         <summary>How do I verify payTo before signing?</summary>
@@ -254,7 +309,7 @@ ${headTags({
 
 export function docsHtml(origin: string, pricePerTool: number): string {
   const description =
-    "Agent docs for x402check: pay-per-tool trust preflight, verify payTo, uptime, compare tools, budget guard, OpenAPI and MCP discovery.";
+    "Agent docs for x402check: check before paying any x402 API, is this API a scam/safe, verify payTo, uptime, compare tools, budget guard, OpenAPI and MCP discovery.";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -272,6 +327,7 @@ ${headTags({
     <a class="brand" href="/">x402check</a>
     <nav>
       <a href="/docs" aria-current="page">Docs</a>
+      <a href="/stats">Stats</a>
       <a href="/openapi.json">OpenAPI</a>
       <a href="/llms.txt">llms.txt</a>
       <a href="/mcp.json">MCP</a>
@@ -279,7 +335,7 @@ ${headTags({
   </header>
   <main class="wrap docs">
     <h1>Agent docs</h1>
-    <p class="lede">Paid per tool. No free checks. Recommended unit <strong>$${pricePerTool}</strong> (Bazaar micro-utils often $0.001–$0.005). Use before any x402 settle when you need to know <em>is this x402 endpoint safe</em>, <em>verify payTo</em>, check uptime, compare sellers, or keep a budget guard.</p>
+    <p class="lede">Paid per tool. No free checks. Recommended unit <strong>$${pricePerTool}</strong> (Bazaar micro-utils often $0.001–$0.005). Use before any x402 settle when you need to <em>check before paying</em>, ask <em>is this API a scam</em> / <em>is this x402 endpoint safe</em>, <em>verify payTo</em>, check uptime, compare sellers, or keep a budget guard.</p>
     <h2>Single</h2>
     <pre>GET ${origin}/preflight?url=https%3A%2F%2Fwww.api-xpay.com%2Fx402%2Fping</pre>
     <h2>Batch (N × $${pricePerTool} in one Exact payment)</h2>
@@ -288,12 +344,13 @@ ${headTags({
     <p>Limitation: x402 Exact = <em>one</em> settlement per HTTP request. Batch uses DynamicPrice = N×unit, not N separate txs.</p>
     <h2>When to call</h2>
     <ul>
-      <li>Before PAYMENT-SIGNATURE / any third-party x402 settle</li>
+      <li>Check before paying / before PAYMENT-SIGNATURE to any third-party x402 settle</li>
+      <li>Is this API a scam / is this x402 endpoint safe or legit?</li>
       <li>Verify payTo; detect payTo or price changes</li>
       <li>Uptime / is the endpoint down</li>
       <li>Compare candidates; screen Bazaar search hits</li>
       <li>Validate 402 requirements; debug failing settles</li>
-      <li>Audit log of why you paid or refused</li>
+      <li>Audit log of why you paid or refused · live counts at <a href="/stats">/stats</a></li>
     </ul>
     <h2>Adopt by default</h2>
     <ul>
@@ -308,8 +365,10 @@ ${headTags({
       <li><a href="https://www.npmjs.com/package/x402check-ai-sdk"><code>x402check-ai-sdk</code></a> — Vercel AI SDK tools + <code>beforePayment</code></li>
       <li><a href="https://www.npmjs.com/package/x402check-langchain"><code>x402check-langchain</code></a> — LangChain JS tools</li>
       <li><a href="https://www.npmjs.com/package/plugin-x402check"><code>plugin-x402check</code></a> — ElizaOS plugin</li>
+      <li><a href="https://pypi.org/project/x402check-langchain/"><code>x402check-langchain</code></a> — LangChain Python tools (PyPI)</li>
       <li><a href="https://github.com/nwilliams005/x402check-cloudflare-agent">Cloudflare Agents template</a></li>
       <li><a href="https://github.com/nwilliams005/x402check-examples">OpenAI Agents / LlamaIndex / CrewAI examples</a></li>
+      <li>MCP Registry: <code>dev.x402check/mcp</code> · remote <code>https://x402check.dev/mcp</code></li>
     </ul>
     <h2>Machine-readable</h2>
     <p>

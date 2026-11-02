@@ -1,7 +1,7 @@
 {
   "name": "x402check-mcp",
-  "version": "0.1.2",
-  "description": "MCP stdio bridge to x402check \u2014 preflight_check, verify_payto, compare_tools before paying (ok|caution|avoid + history).",
+  "version": "0.1.3",
+  "description": "MCP stdio bridge to x402check \u2014 preflight_check, verify_payto, compare_tools before paying (ok|caution|avoid + history) \u2014 check before paying; is this API a scam/safe.",
   "type": "module",
   "main": "./src/stdio.js",
   "bin": {
@@ -29,7 +29,10 @@
     "budget-guard",
     "compare-tools",
     "verify-payto",
-    "x402check"
+    "x402check",
+    "check-before-paying",
+    "is-this-api-a-scam",
+    "before-payment"
   ],
   "homepage": "https://x402check.dev",
   "bugs": {

@@ -7,7 +7,8 @@ Returns `ok` | `caution` | `avoid` plus `payTo`, `priceUsd`, and **history** (up
 Use it when you need to:
 
 - gate every settle / `PAYMENT-SIGNATURE`
-- answer “is this x402 endpoint safe?”
+- answer “is this API a scam?” / “is this x402 endpoint safe?”
+- check before paying any x402 settle
 - verify payTo before signing USDC on Base
 - detect price or wallet drift
 - check uptime / whether a seller is down
@@ -50,4 +51,7 @@ await pay('https://seller.example/api');
 - `assertPayable(check, { allowCaution? })`
 - `withPreflightPay(payFn, opts?)` — wrap a pay function so preflight runs first
 
-Paid **per tool checked** via x402 Exact USDC on Base. No free tier. See https://x402check.dev/llms.txt
+Paid **per tool checked** via x402 Exact USDC on Base. No free tier.
+
+- Docs: https://x402check.dev/llms.txt
+- Live stats: https://x402check.dev/stats

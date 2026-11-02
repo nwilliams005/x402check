@@ -2,18 +2,23 @@
 
 MCP stdio bridge to the remote [x402check](https://x402check.dev) HTTP/MCP endpoint.
 
-Trust-check x402 seller URLs **before paying**: verdict `ok|caution|avoid` + history (uptime, payTo/price changes).
+**Check before paying** any x402 seller URL: verdict `ok|caution|avoid` + history (uptime, payTo/price changes).
+
+Answers agent prompts like *is this API a scam?*, *is this x402 endpoint safe?*, *verify payTo before signing*, *check before paying*.
 
 Official MCP Registry name: `dev.x402check/mcp`
 
 ## Tools (remote)
 
-- `preflight_check` — single URL trust preflight
+- `preflight_check` — single URL trust preflight (check before paying)
 - `verify_payto` — verify receiving wallet / payTo history (same per-URL billing)
 - `preflight_batch` — up to 25 URLs
 - `compare_tools` — compare candidates (same billing as batch)
+- `watch_tool` — optional $5 Exact / 30d daily re-check + webhook
 
-Use for: is this endpoint safe, verify payTo, uptime, price drift, compare/cheapest, budget guard, debug failing 402.
+Use for: is this API a scam, is this endpoint safe, verify payTo, uptime, price drift, compare/cheapest, budget guard, debug failing 402.
+
+Live honest usage: https://x402check.dev/stats
 
 ## Install
 
