@@ -1,6 +1,6 @@
 {
   "name": "x402check-langchain",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "LangChain JS tools for x402check \u2014 preflight_check, verify_payto, compare_tools before an agent pays an x402 endpoint (ok|caution|avoid + history) \u2014 check before paying; is this API a scam/safe.",
   "type": "module",
   "main": "./src/index.js",
