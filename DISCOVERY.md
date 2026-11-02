@@ -110,3 +110,16 @@ cd /workspace/x402-preflight && WRANGLER_CACHE_DIR=/tmp/wcache npx wrangler depl
 ```
 
 Secrets `CDP_API_KEY_ID` / `CDP_API_KEY_SECRET` must already be set on the Worker (do not re-print).
+
+## Consistency pass 2026-11-01 (America/Chicago)
+
+- Worker redeployed with check-before-paying / scam-safe Bazaar descriptions + tags (`b02ae9a4-96c3-45ed-9e94-422001592f91`).
+- Paid settle re-trigger: tx `0xa0827cba9e6a4d7c4f4cc6094ef43af19bfdaabe9b0c20fc3b1be3f05a518a36` (CDP Bazaar index may lag).
+- 402 Index: re-registered; description forced to new wording + MCP 0.1.3 / client 0.1.2.
+- x402dash: already registered (`x402check.dev/preflight`); no public update API for description.
+- GitHub `nwilliams005/x402check`: description, topics, README versions line updated.
+- Foundation docs PR #4085 + Recall-Kitchen #129: wording/versions refreshed (signed commits).
+- AgentKit #1613: no npm version pin (uses `https://x402check.dev`) — skipped per Nicklaus.
+- Social routine files refreshed (`social/queue.md`, `daily_procedure.md`, `strategy.md`). UpdateRoutine tool not available in executor.
+- IndexNow + Bing IndexNow: 200.
+- x402scan: still needs account login for resources/register; no public API refresh found.
