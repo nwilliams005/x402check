@@ -1,6 +1,6 @@
 # x402check
 
-**Trust-check an x402 seller URL before your agent pays it.**
+**Check before paying any x402 seller URL** — trust-check it before your agent pays (is this API a scam / safe?).
 
 [x402check](https://x402check.dev) is a paid preflight for the [x402](https://x402.org) HTTP 402 payment protocol. Call it with a seller URL; get back `ok` | `caution` | `avoid` plus that endpoint's live `payTo`, price, and history (uptime, payTo changes, price changes).
 
@@ -23,6 +23,7 @@ Live site: **https://x402check.dev**
 | Vercel AI SDK | [`x402check-ai-sdk`](https://www.npmjs.com/package/x402check-ai-sdk) |
 | LangChain JS | [`x402check-langchain`](https://www.npmjs.com/package/x402check-langchain) |
 | ElizaOS plugin | [`plugin-x402check`](https://www.npmjs.com/package/plugin-x402check) |
+| LangChain Python (PyPI) | [`x402check-langchain`](https://pypi.org/project/x402check-langchain/) |
 | Cloudflare template | [x402check-cloudflare-agent](https://github.com/nwilliams005/x402check-cloudflare-agent) |
 
 ## Why agents call it

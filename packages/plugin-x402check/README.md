@@ -8,7 +8,7 @@ Actions:
 - `X402CHECK_VERIFY_PAYTO` — receiving wallet + drift
 - `X402CHECK_COMPARE_TOOLS` — compare candidate sellers
 
-Use when the agent is about to settle / sign `PAYMENT-SIGNATURE`, asks “is this x402 endpoint safe?”, needs to verify payTo on Base, or compare tools.
+Use when the agent is about to settle / sign `PAYMENT-SIGNATURE`, asks “is this API a scam?” / “is this x402 endpoint safe?”, needs to check before paying, verify payTo on Base, or compare tools.
 
 ## Install
 

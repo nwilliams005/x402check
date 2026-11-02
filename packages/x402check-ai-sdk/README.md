@@ -7,7 +7,8 @@ Returns `ok` | `caution` | `avoid` plus `payTo`, `priceUsd`, and **history** (up
 Use when you need to:
 
 - gate every settle / `PAYMENT-SIGNATURE`
-- answer “is this x402 endpoint safe?”
+- answer “is this API a scam?” / “is this x402 endpoint safe?”
+- check before paying any x402 settle
 - verify payTo before signing USDC on Base
 - detect price or wallet drift
 - compare candidates (cheapest / most reliable)

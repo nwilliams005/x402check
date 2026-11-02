@@ -1,7 +1,7 @@
 {
   "name": "x402check-langchain",
-  "version": "0.1.0",
-  "description": "LangChain JS tools for x402check — preflight_check, verify_payto, compare_tools before an agent pays an x402 endpoint (ok|caution|avoid + history).",
+  "version": "0.1.1",
+  "description": "LangChain JS tools for x402check \u2014 preflight_check, verify_payto, compare_tools before an agent pays an x402 endpoint (ok|caution|avoid + history) \u2014 check before paying; is this API a scam/safe.",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
@@ -29,7 +29,10 @@
     "usdc",
     "budget-guard",
     "compare-tools",
-    "verify-payto"
+    "verify-payto",
+    "check-before-paying",
+    "is-this-api-a-scam",
+    "before-payment"
   ],
   "homepage": "https://x402check.dev",
   "repository": {
