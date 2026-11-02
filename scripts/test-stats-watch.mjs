@@ -19,6 +19,8 @@ import {
   diffBaseline,
   watchAcceptRequirement,
   watchKey,
+  formatBaselineLine,
+  sendWatchEmail,
 } from "../src/watch.ts";
 
 function memoryKv() {
@@ -194,4 +196,52 @@ test("formatOnChainLine and loadOnChainStats", async () => {
   assert.match(formatOnChainLine(snap), /5 paid on-chain/);
   assert.match(formatOnChainLine(snap), /\$0\.010 USDC/);
   assert.match(formatOnChainLine(snap), /4 wallets/);
+});
+
+test("formatBaselineLine is stable", () => {
+  const line = formatBaselineLine({
+    payTo: "0xabc",
+    priceUsd: 0.002,
+    network: "eip155:8453",
+    reachable: true,
+    is402: true,
+    verdict: "ok",
+  });
+  assert.match(line, /payTo=0xabc/);
+  assert.match(line, /price=\$0\.002/);
+  assert.match(line, /availability=reachable\+402/);
+  assert.match(line, /verdict=ok/);
+});
+
+test("sendWatchEmail no-ops without RESEND_API_KEY", async () => {
+  const ok = await sendWatchEmail(
+    { RESEND_API_KEY: "", PAYTO_HISTORY: memoryKv() },
+    "buyer@example.com",
+    {
+      type: "x402check.watch.alert",
+      watchId: "abc",
+      url: "https://example.com/tool",
+      changes: ["payTo"],
+      baseline: {
+        payTo: "0x1",
+        priceUsd: 0.01,
+        network: "eip155:8453",
+        reachable: true,
+        is402: true,
+        verdict: "ok",
+      },
+      current: {
+        payTo: "0x2",
+        priceUsd: 0.01,
+        network: "eip155:8453",
+        reachable: true,
+        is402: true,
+        verdict: "caution",
+      },
+      checkedAt: "2026-11-01T12:00:00.000Z",
+      expiresAt: "2026-12-01T12:00:00.000Z",
+      docs: "https://x402check.dev/docs",
+    },
+  );
+  assert.equal(ok, false);
 });

@@ -174,7 +174,7 @@ function toolList(price: number) {
       {
         name: "watch_tool",
         description:
-          "Subscribe to daily re-checks of one x402 seller URL for 30 days. Alerts your webhook when payTo, price, network, or availability changes. Fixed $" +
+          "Subscribe to daily re-checks of one x402 seller URL for 30 days. Alerts your webhook and/or email when payTo, price, network, or availability changes. Fixed $" +
           String(WATCH_PRICE_USD) +
           " USDC Exact (not per-check). Optional after a one-shot preflight when you will revisit the same seller.",
         inputSchema: {
@@ -189,7 +189,7 @@ function toolList(price: number) {
             email: {
               type: "string",
               description:
-                "Optional contact email stored for future alerts (webhook is the live channel today)",
+                "Optional email for change alerts via Resend (also set webhookUrl if you want an HTTPS webhook)",
             },
           },
         },
@@ -326,7 +326,7 @@ async function executePaidTool(
       webhookUrl: created.watch.webhookUrl,
       baseline: created.watch.baseline,
       statusUrl: `/watch?id=${created.watch.id}`,
-      note: "Daily re-check for 30 days. Webhook fires on payTo/price/network/availability change. Renew with POST /watch/renew.",
+      note: "Daily re-check for 30 days. Webhook and/or email fire on payTo/price/network/availability change. Renew with POST /watch/renew.",
     };
   }
   throw new Error(`Unknown paid tool: ${name}`);
@@ -373,7 +373,7 @@ export async function handleMcp(c: Context<{ Bindings: Env }>) {
           version: "0.3.0",
         },
         instructions:
-          `Check before paying any x402 seller. Call preflight_check when asked is this API a scam / is this endpoint safe, or before PAYMENT-SIGNATURE (verify_payto for wallet focus). To compare sellers, call compare_tools / preflight_batch. Optional watch_tool ($${WATCH_PRICE_USD}/30d) re-checks daily and webhooks on payTo/price/network/availability change. Unit $${price}/URL via x402 Exact on MCP tools/call: unpaid calls return PaymentRequired (structuredContent.accepts); retry with params._meta["x402/payment"]. Deny pay when verdict=avoid; escalate on caution; still enforce maxAmount on ok. We probe the endpoint's live 402 + history (not wallet OFAC/simulation). Live stats: /stats.`,
+          `Check before paying any x402 seller. Call preflight_check when asked is this API a scam / is this endpoint safe, or before PAYMENT-SIGNATURE (verify_payto for wallet focus). To compare sellers, call compare_tools / preflight_batch. Optional watch_tool ($${WATCH_PRICE_USD}/30d) re-checks daily and alerts webhook/email on payTo/price/network/availability change. Unit $${price}/URL via x402 Exact on MCP tools/call: unpaid calls return PaymentRequired (structuredContent.accepts); retry with params._meta["x402/payment"]. Deny pay when verdict=avoid; escalate on caution; still enforce maxAmount on ok. We probe the endpoint's live 402 + history (not wallet OFAC/simulation). Live stats: /stats.`,
       }),
     );
   }

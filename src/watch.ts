@@ -1,7 +1,7 @@
 /**
  * $5/month (30-day) watch subscription per tool URL.
  * Agent-native: one Exact USDC payment on Base buys 30 days of daily re-checks.
- * Alerts fire to webhookUrl when payTo, price, network, or availability changes.
+ * Alerts fire to webhookUrl and/or email (Resend) when payTo, price, network, or availability changes.
  */
 import type { Env, ToolCheck, Verdict } from "./types";
 import { checkTool, isBlockedHost } from "./preflight";
@@ -33,7 +33,7 @@ export type WatchRecord = {
   id: string;
   url: string;
   webhookUrl: string | null;
-  /** Stored for future email alerts; webhook is the live channel today. */
+  /** Optional email alert via Resend when RESEND_API_KEY is set on the Worker. */
   email: string | null;
   createdAt: string;
   expiresAt: string;
@@ -242,8 +242,112 @@ async function postWebhook(
   }
 }
 
+
+
+export type WatchAlertPayload = {
+  type: "x402check.watch.alert";
+  watchId: string;
+  url: string;
+  changes: string[];
+  baseline: WatchBaseline;
+  current: WatchBaseline;
+  checkedAt: string;
+  expiresAt: string;
+  docs: string;
+};
+
+export function formatBaselineLine(b: WatchBaseline): string {
+  const pay = b.payTo || "(none)";
+  const price = b.priceUsd == null ? "(unknown)" : `$${b.priceUsd}`;
+  const net = b.network || "(none)";
+  const avail = b.reachable
+    ? b.is402
+      ? "reachable+402"
+      : "reachable"
+    : "unreachable";
+  return `payTo=${pay} price=${price} network=${net} availability=${avail} verdict=${b.verdict}`;
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 /**
- * Daily cron: re-check every active, non-expired watch and webhook on drift.
+ * Send a watch alert via Resend. Returns false when RESEND_API_KEY is unset or the API fails.
+ * Uses fetch only — no Resend SDK (keeps the Worker bundle small).
+ */
+export async function sendWatchEmail(
+  env: Env,
+  to: string,
+  payload: WatchAlertPayload,
+): Promise<boolean> {
+  const apiKey = (env.RESEND_API_KEY || "").trim();
+  if (!apiKey) return false;
+  const from =
+    (env.RESEND_FROM || "").trim() ||
+    "x402check Watch <watch@alerts.x402check.dev>";
+  const changeList = payload.changes.join(", ");
+  const subject = `x402check watch alert: ${changeList}`;
+  const statusUrl = `https://x402check.dev/watch?id=${payload.watchId}`;
+  const textBody = [
+    "x402check detected a change on a watched x402 seller.",
+    "",
+    `URL: ${payload.url}`,
+    `Changes: ${changeList}`,
+    `Checked at: ${payload.checkedAt}`,
+    `Watch expires: ${payload.expiresAt}`,
+    "",
+    `Before: ${formatBaselineLine(payload.baseline)}`,
+    `After:  ${formatBaselineLine(payload.current)}`,
+    "",
+    `Status: ${statusUrl}`,
+    `Docs: ${payload.docs}`,
+    "",
+    "This is a transactional alert for your paid $5 / 30-day watch.",
+  ].join("\n");
+  const html = `<p>x402check detected a change on a watched x402 seller.</p>
+<ul>
+<li><strong>URL:</strong> ${escapeHtml(payload.url)}</li>
+<li><strong>Changes:</strong> ${escapeHtml(changeList)}</li>
+<li><strong>Checked at:</strong> ${escapeHtml(payload.checkedAt)}</li>
+<li><strong>Watch expires:</strong> ${escapeHtml(payload.expiresAt)}</li>
+</ul>
+<p><strong>Before:</strong> <code>${escapeHtml(formatBaselineLine(payload.baseline))}</code><br/>
+<strong>After:</strong> <code>${escapeHtml(formatBaselineLine(payload.current))}</code></p>
+<p><a href="${escapeHtml(statusUrl)}">Watch status</a> · <a href="${escapeHtml(payload.docs)}">Docs</a></p>
+<p style="color:#666;font-size:12px">Transactional alert for your paid $5 / 30-day watch.</p>`;
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "content-type": "application/json",
+        "user-agent": "x402check-watch/0.1",
+      },
+      body: JSON.stringify({
+        from,
+        to: [to],
+        subject,
+        text: textBody,
+        html,
+        tags: [
+          { name: "product", value: "watch" },
+          { name: "watch_id", value: payload.watchId.slice(0, 64) },
+        ],
+      }),
+    });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Daily cron: re-check every active, non-expired watch; webhook and/or email on drift.
  */
 export async function runWatchCron(env: Env): Promise<CronSummary> {
   const summary: CronSummary = {
@@ -291,23 +395,27 @@ export async function runWatchCron(env: Env): Promise<CronSummary> {
           rec.alerts = [alert, ...rec.alerts].slice(0, WATCH_MAX_ALERTS);
           rec.lastAlertAt = check.checkedAt;
           rec.baseline = current; // re-baseline after alert so we don't spam
+          const payload: WatchAlertPayload = {
+            type: "x402check.watch.alert",
+            watchId: rec.id,
+            url: rec.url,
+            changes,
+            baseline: alert.baseline,
+            current,
+            checkedAt: check.checkedAt,
+            expiresAt: rec.expiresAt,
+            docs: "https://x402check.dev/docs",
+          };
           if (rec.webhookUrl) {
-            const ok = await postWebhook(rec.webhookUrl, {
-              type: "x402check.watch.alert",
-              watchId: rec.id,
-              url: rec.url,
-              changes,
-              baseline: alert.baseline,
-              current,
-              checkedAt: check.checkedAt,
-              expiresAt: rec.expiresAt,
-              docs: "https://x402check.dev/docs",
-            });
-            if (ok) summary.alerted += 1;
-            else summary.errors += 1;
-          } else {
-            summary.alerted += 1; // recorded even without webhook
+            const ok = await postWebhook(rec.webhookUrl, payload);
+            if (!ok) summary.errors += 1;
           }
+          if (rec.email) {
+            const okMail = await sendWatchEmail(env, rec.email, payload);
+            // Missing RESEND_API_KEY: skip without error so unconfigured deploys stay safe
+            if (!okMail && (env.RESEND_API_KEY || "").trim()) summary.errors += 1;
+          }
+          summary.alerted += 1;
         }
         await saveWatch(kv, rec);
       } catch {

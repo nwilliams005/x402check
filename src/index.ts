@@ -426,7 +426,7 @@ function paymentRoutes(env: Env, origin: string) {
     },
     "POST /watch": {
       description:
-        `Watch one x402 seller URL for 30 days ($${WATCH_PRICE_USD} Exact USDC). Daily re-check; webhook on payTo/price/network/availability change. Optional after a one-shot preflight.`,
+        `Watch one x402 seller URL for 30 days ($${WATCH_PRICE_USD} Exact USDC). Daily re-check; webhook and/or email on payTo/price/network/availability change. Optional after a one-shot preflight.`,
       mimeType: "application/json",
       serviceName,
       tags: [...tags, "watch", "subscription", "alert"],
@@ -449,7 +449,7 @@ function paymentRoutes(env: Env, origin: string) {
               },
               email: {
                 type: "string",
-                description: "Optional contact email (stored; webhook is the live alert channel)",
+                description: "Optional email for Resend alerts when RESEND_API_KEY is configured",
               },
             },
             required: ["url"],
@@ -683,7 +683,7 @@ app.get("/preflight", async (c) => {
     watchHint:
       "Optional: POST /watch {url, webhookUrl} — $" +
       WATCH_PRICE_USD +
-      "/30d daily re-check + webhook on payTo/price/network/availability change.",
+      "/30d daily re-check + webhook/email on payTo/price/network/availability change.",
   });
 });
 
@@ -765,7 +765,7 @@ app.post("/preflight", async (c) => {
     watchHint:
       "Optional: POST /watch {url, webhookUrl} — $" +
       WATCH_PRICE_USD +
-      "/30d daily re-check + webhook on change.",
+      "/30d daily re-check + webhook/email on change.",
   });
 });
 

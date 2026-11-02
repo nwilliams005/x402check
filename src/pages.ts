@@ -294,7 +294,7 @@ ${headTags({
       </details>
       <details>
         <summary>Can I watch a seller over time?</summary>
-        <p>Optional: <code>POST /watch</code> with <code>{url, webhookUrl}</code> — $5 Exact USDC buys 30 days of daily re-checks. Webhook on payTo, price, network, or availability change. Status: <code>GET /watch?id=…</code>.</p>
+        <p>Optional: <code>POST /watch</code> with <code>{url, webhookUrl?, email?}</code> — $5 Exact USDC buys 30 days of daily re-checks. Webhook and/or email on payTo, price, network, or availability change. Status: <code>GET /watch?id=…</code>.</p>
       </details>
     </section>
     <p class="fine">We never pay the target. Agents-first brand. Markdown twin: <a href="/index.md">/index.md</a>.</p>

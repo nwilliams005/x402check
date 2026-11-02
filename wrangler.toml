@@ -30,3 +30,9 @@ preview_id = "8f4f73f6432e4020a313131d52bab27d"
 
 [triggers]
 crons = ["0 6 * * *"]
+
+# Secrets (set via wrangler secret put — never commit):
+#   CDP_API_KEY_ID, CDP_API_KEY_SECRET
+#   RESEND_API_KEY          — enables watch email alerts (see RESEND_SETUP.md)
+# Optional plain var after domain verified:
+#   RESEND_FROM = "x402check Watch <watch@alerts.x402check.dev>"

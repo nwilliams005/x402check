@@ -101,6 +101,10 @@ export interface Env {
   SERVICE_NAME: string;
   CDP_API_KEY_ID?: string;
   CDP_API_KEY_SECRET?: string;
+  /** Resend API key for watch email alerts. Optional; webhook still works without it. */
+  RESEND_API_KEY?: string;
+  /** From header, e.g. "x402check Watch <watch@alerts.x402check.dev>". */
+  RESEND_FROM?: string;
   PAYTO_HISTORY: KVNamespace;
 }
 
