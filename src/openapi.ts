@@ -72,6 +72,8 @@ export function openApiSpec(origin: string, pricePerTool: number) {
     servers: [{ url: origin, description: "This deployment" }],
     tags: [
       { name: "preflight", description: "Paid trust checks" },
+      { name: "watch", description: "Optional $5/30d daily re-check + webhook alerts" },
+      { name: "stats", description: "Live aggregate usage (honest counts)" },
       { name: "discovery", description: "Free agent discovery documents" },
     ],
     paths: {
@@ -195,6 +197,126 @@ export function openApiSpec(origin: string, pricePerTool: number) {
           },
         },
       },
+      "/stats": {
+        get: {
+          operationId: "getStats",
+          tags: ["stats"],
+          summary: "Live aggregate check stats (real KV counts, never padded)",
+          description:
+            "Returns totalChecks, paidChecks, toolsChecked, flaggedOk/caution/avoid, and last-24h counters. " +
+            "Counts start from when stats recording shipped; small numbers are shown honestly.",
+          security: [],
+          responses: {
+            "200": {
+              description: "StatsSnapshot",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/StatsSnapshot" },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/watch": {
+        post: {
+          operationId: "createWatch",
+          tags: ["watch"],
+          summary: "Start a 30-day watch ($5 Exact USDC)",
+          description:
+            "OPTIONAL after a one-shot preflight. Registers one seller URL for daily re-checks. " +
+            "Webhook (https) fires when payTo, price, network, or availability changes. " +
+            "One Exact payment of $5 USDC on Base buys 30 days; renew with POST /watch/renew.",
+          security: [{ x402Payment: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["url"],
+                  properties: {
+                    url: { type: "string", format: "uri" },
+                    webhookUrl: { type: "string", format: "uri", description: "https webhook for alerts" },
+                    email: { type: "string", format: "email", description: "Stored for future email alerts; webhook is live today" },
+                  },
+                },
+                example: {
+                  url: "https://www.api-xpay.com/x402/ping",
+                  webhookUrl: "https://hooks.example.com/x402check",
+                },
+              },
+            },
+          },
+          "x-payment-info": {
+            scheme: "exact",
+            network: "eip155:8453",
+            price: "$5",
+            asset: "USDC",
+            pricingModel: "watch_30d",
+          },
+          responses: {
+            "200": { description: "Watch created with baseline + watchId" },
+            "400": { description: "missing_url | invalid_webhook | blocked_host" },
+            "402": { description: "Payment Required — $5 Exact (5000000 atomic USDC)" },
+          },
+        },
+        get: {
+          operationId: "getWatch",
+          tags: ["watch"],
+          summary: "Free watch status by id",
+          security: [],
+          parameters: [
+            {
+              name: "id",
+              in: "query",
+              required: true,
+              schema: { type: "string" },
+              description: "watchId from POST /watch",
+            },
+          ],
+          responses: {
+            "200": { description: "WatchRecord (public)" },
+            "400": { description: "missing_id" },
+            "404": { description: "not_found" },
+          },
+        },
+      },
+      "/watch/renew": {
+        post: {
+          operationId: "renewWatch",
+          tags: ["watch"],
+          summary: "Renew a watch for another 30 days ($5 Exact)",
+          security: [{ x402Payment: [] }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["watchId"],
+                  properties: {
+                    watchId: { type: "string" },
+                    id: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+          "x-payment-info": {
+            scheme: "exact",
+            network: "eip155:8453",
+            price: "$5",
+            asset: "USDC",
+            pricingModel: "watch_30d",
+          },
+          responses: {
+            "200": { description: "Watch renewed" },
+            "402": { description: "Payment Required — $5 Exact" },
+            "404": { description: "not_found" },
+          },
+        },
+      },
       "/openapi.json": {
         get: {
           operationId: "getOpenApi",
@@ -315,6 +437,30 @@ export function openApiSpec(origin: string, pricePerTool: number) {
         },
       },
       schemas: {
+        StatsSnapshot: {
+          type: "object",
+          properties: {
+            totalChecks: { type: "integer" },
+            paidChecks: { type: "integer" },
+            toolsChecked: { type: "integer" },
+            flaggedOk: { type: "integer" },
+            flaggedCaution: { type: "integer" },
+            flaggedAvoid: { type: "integer" },
+            last24hChecks: { type: "integer" },
+            last24hCaution: { type: "integer" },
+            last24hAvoid: { type: "integer" },
+            updatedAt: { type: "string", nullable: true },
+            watch: {
+              type: "object",
+              description: "Optional product hint",
+              properties: {
+                priceUsd: { type: "number" },
+                durationDays: { type: "integer" },
+                endpoint: { type: "string" },
+              },
+            },
+          },
+        },
         Error: {
           type: "object",
           properties: {
@@ -557,6 +703,10 @@ Exact settles one amount per HTTP request. Batch uses DynamicPrice = len(urls)*u
 
 - [GET /preflight](${origin}/preflight): Query url=https://seller… → ToolCheck (402 if unpaid)
 - [POST /preflight](${origin}/preflight): Body {"urls":[…]} → BatchResult (charged per URL)
+- [GET /stats](${origin}/stats): Live aggregate counts (honest KV totals; never padded)
+- [POST /watch](${origin}/watch): Optional $5 Exact / 30d daily re-check + webhook on payTo/price/network/availability change
+- [GET /watch](${origin}/watch): Query id= → watch status (free)
+- [POST /watch/renew](${origin}/watch/renew): Renew watch another 30 days ($5 Exact)
 
 ## MCP tools
 
@@ -572,6 +722,12 @@ Spec: https://github.com/x402-foundation/x402/blob/main/specs/transports-v2/mcp.
 - \`verify_payto\` — same billing; focused on receiving wallet + payToChanges
 - \`preflight_batch\` — up to 25 URLs
 - \`compare_tools\` — same billing as batch; compare candidates
+
+- \`watch_tool\` — optional $5 Exact / 30d daily re-check + webhook (fixed price)
+
+## Optional watch ($5 / 30 days)
+
+One Exact USDC payment registers a seller URL for daily re-checks. Webhook alerts when payTo, price, network, or availability changes. Status: GET /watch?id=. Renew: POST /watch/renew. Live stats (honest counts): GET /stats. Helpful add-on after a one-shot preflight — never required.
 
 ## Response fields (stable)
 
@@ -672,6 +828,14 @@ curl -sS -X POST '${origin}/preflight' \\
   -H 'PAYMENT-SIGNATURE: <base64>' \\
   -d '{"urls":["https://a.example/x402","https://b.example/x402"]}'
 \`\`\`
+
+
+### Can I watch a seller over time?
+Optional. POST /watch {url, webhookUrl} with $5 Exact USDC buys 30 days of daily re-checks. Webhook fires on payTo/price/network/availability change. MCP tool: watch_tool. Renew with POST /watch/renew. Email is stored for a future channel; webhook is live today.
+
+### Where are live stats?
+GET /stats returns real KV aggregates (totalChecks, paidChecks, toolsChecked, flagged caution/avoid, last-24h). Numbers are never fabricated or padded.
+
 `;
 }
 
@@ -694,9 +858,14 @@ Pay $${pricePerTool} via x402 Exact on Base, then retry with PAYMENT-SIGNATURE.
 
 - [OpenAPI](${origin}/openapi.json)
 - [llms.txt](${origin}/llms.txt)
+- [Live stats](${origin}/stats)
 - [MCP Server Card](${origin}/mcp/server-card)
 - [A2A Agent Card](${origin}/.well-known/agent-card.json)
 - [AI Catalog](${origin}/.well-known/ai-catalog.json)
+
+## Optional watch
+
+POST /watch {url, webhookUrl} — $5 Exact USDC / 30 days daily re-check + webhook on change. MCP: watch_tool.
 
 ## Docs
 
@@ -708,6 +877,8 @@ export function docsMarkdown(origin: string, pricePerTool: number): string {
   return `# x402check agent docs
 
 Paid per tool. No free checks. Unit **$${pricePerTool}** USDC Exact on Base (eip155:8453).
+
+Live stats: GET /stats (honest KV counts). Optional watch: POST /watch — $5 Exact / 30d daily re-check + webhook; MCP watch_tool.
 
 ## Single
 
@@ -752,7 +923,7 @@ Limitation: x402 Exact = one settlement per HTTP request. Batch uses DynamicPric
 
 ## MCP tools
 
-preflight_check · verify_payto · preflight_batch · compare_tools (aliases share per-URL billing).
+preflight_check · verify_payto · preflight_batch · compare_tools (per-URL billing) · watch_tool ($5/30d).
 
 MCP payment (transports-v2/mcp.md): unpaid tools/call → PaymentRequired (\`structuredContent.accepts\`); retry with \`params._meta["x402/payment"]\`; success → \`result._meta["x402/payment-response"]\`. Same Base Exact USDC / payTo as HTTP.
 

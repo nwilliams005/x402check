@@ -72,6 +72,7 @@ async function main() {
       "/",
       "/docs",
       "/example",
+      "/stats",
       "/index.md",
       "/docs.md",
       "/llms.txt",
@@ -616,6 +617,124 @@ async function main() {
           typeof body.pricePerToolUsd === "number",
         chargedTools: body?.chargedTools,
         totalUsd: body?.totalUsd,
+      });
+    }
+
+    // Live stats (honest counts after probes above)
+    {
+      const r = await fetch(`${BASE}/stats`);
+      const body = await r.json();
+      results.push({
+        test: "GET /stats real counters",
+        status: r.status,
+        ok:
+          r.status === 200 &&
+          typeof body?.totalChecks === "number" &&
+          body.totalChecks >= 1 &&
+          typeof body?.paidChecks === "number" &&
+          typeof body?.toolsChecked === "number" &&
+          body?.watch?.priceUsd === 5 &&
+          body?.source === "kv",
+        totalChecks: body?.totalChecks,
+        paidChecks: body?.paidChecks,
+      });
+    }
+
+    // Landing includes Live stats
+    {
+      const r = await fetch(`${BASE}/`);
+      const html = await r.text();
+      results.push({
+        test: "landing shows Live stats",
+        status: r.status,
+        ok: r.status === 200 && html.includes("Live stats") && html.includes("/stats"),
+      });
+    }
+
+    // Unpaid POST /watch → 402 with $5 (5000000)
+    {
+      const r = await fetch(`${BASE}/watch`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          url: TARGETS[0],
+          webhookUrl: "https://hooks.example.com/x402check",
+        }),
+      });
+      const body = await r.json().catch(() => ({}));
+      const pr = r.headers.get("PAYMENT-REQUIRED") || r.headers.get("payment-required") || "";
+      let amountOk = body?.amountAtomic === "5000000" || body?.priceUsd === 5;
+      if (pr) {
+        try {
+          const decoded = JSON.parse(Buffer.from(pr, "base64").toString("utf8"));
+          const accepts = decoded?.accepts || [];
+          amountOk =
+            amountOk ||
+            accepts.some(
+              (a) => String(a.amount) === "5000000" || String(a.maxAmountRequired) === "5000000",
+            );
+        } catch {
+          /* header may be raw json in some paths */
+          try {
+            const decoded = JSON.parse(pr);
+            const accepts = decoded?.accepts || [];
+            amountOk =
+              amountOk ||
+              accepts.some((a) => String(a.amount) === "5000000");
+          } catch { /* ignore */ }
+        }
+      }
+      const acceptsBody = body?.accepts || [];
+      amountOk =
+        amountOk ||
+        acceptsBody.some((a) => String(a.amount) === "5000000");
+      results.push({
+        test: "unpaid POST /watch → 402 $5",
+        status: r.status,
+        ok: r.status === 402 && amountOk,
+        priceUsd: body?.priceUsd,
+        amountAtomic: body?.amountAtomic,
+      });
+    }
+
+    // Free GET /watch without id → 400 with price hint
+    {
+      const r = await fetch(`${BASE}/watch`);
+      const body = await r.json();
+      results.push({
+        test: "GET /watch missing id → 400",
+        status: r.status,
+        ok: r.status === 400 && body?.priceUsd === 5,
+      });
+    }
+
+    // llms.txt mentions /stats and watch
+    {
+      const r = await fetch(`${BASE}/llms.txt`);
+      const text = await r.text();
+      results.push({
+        test: "llms.txt mentions stats + watch",
+        status: r.status,
+        ok:
+          r.status === 200 &&
+          text.includes("/stats") &&
+          text.includes("/watch") &&
+          text.includes("watch_tool"),
+      });
+    }
+
+    // OpenAPI has /stats and /watch
+    {
+      const r = await fetch(`${BASE}/openapi.json`);
+      const spec = await r.json();
+      results.push({
+        test: "openapi has /stats and /watch",
+        status: r.status,
+        ok:
+          r.status === 200 &&
+          !!spec?.paths?.["/stats"] &&
+          !!spec?.paths?.["/watch"]?.post &&
+          !!spec?.paths?.["/watch/renew"],
       });
     }
   } finally {

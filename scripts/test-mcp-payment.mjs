@@ -97,10 +97,10 @@ function samplePayload(accepted) {
   };
 }
 
-await check("PAID_TOOLS covers four paid tools", () => {
+await check("PAID_TOOLS covers five paid tools including watch", () => {
   assert.deepEqual(
     [...PAID_TOOLS].sort(),
-    ["compare_tools", "preflight_batch", "preflight_check", "verify_payto"].sort(),
+    ["compare_tools", "preflight_batch", "preflight_check", "verify_payto", "watch_tool"].sort(),
   );
 });
 
@@ -115,6 +115,8 @@ await check("billableToolCount single + batch dedupe/cap", () => {
   );
   const many = Array.from({ length: 40 }, (_, i) => `https://x/${i}`);
   assert.equal(billableToolCount("preflight_batch", { urls: many }), 25);
+  assert.equal(billableToolCount("watch_tool", { url: "https://seller.example/x" }), 1);
+  assert.equal(billableToolCount("watch_tool", {}), 0);
 });
 
 await check("toolResourceInfo uses mcp://tool/{name}", () => {

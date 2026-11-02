@@ -30,7 +30,13 @@ export const MCP_PAYMENT_RESPONSE_META_KEY = "x402/payment-response";
 
 export const PAID_SINGLE_TOOLS = new Set(["preflight_check", "verify_payto"]);
 export const PAID_BATCH_TOOLS = new Set(["preflight_batch", "compare_tools"]);
-export const PAID_TOOLS = new Set([...PAID_SINGLE_TOOLS, ...PAID_BATCH_TOOLS]);
+/** Fixed-price tools (e.g. $5/30d watch) — not per-URL unit pricing. */
+export const PAID_WATCH_TOOLS = new Set(["watch_tool"]);
+export const PAID_TOOLS = new Set([
+  ...PAID_SINGLE_TOOLS,
+  ...PAID_BATCH_TOOLS,
+  ...PAID_WATCH_TOOLS,
+]);
 
 export type McpToolContent = { type: "text"; text: string };
 
@@ -88,6 +94,10 @@ export function billableToolCount(
       if (n >= MAX_BATCH) break;
     }
     return n;
+  }
+  if (PAID_WATCH_TOOLS.has(toolName)) {
+    const url = typeof args.url === "string" ? args.url.trim() : "";
+    return url ? 1 : 0;
   }
   return 0;
 }
@@ -321,8 +331,19 @@ export async function gatePaidToolCall(opts: {
   return successToolResult(data, settleResult);
 }
 
+export type LiveGateOpts = {
+  /** When set, charge this fixed USD amount (ignore per-tool unit × count). */
+  fixedUsd?: number;
+  pricingModel?: string;
+  maxTimeoutSeconds?: number;
+  extra?: Record<string, unknown>;
+};
+
 /** Build a live PaymentGate backed by the same facilitator + Exact schemes as HTTP. */
-export async function createLivePaymentGate(env: Env): Promise<PaymentGate> {
+export async function createLivePaymentGate(
+  env: Env,
+  opts: LiveGateOpts = {},
+): Promise<PaymentGate> {
   const unit = unitPriceUsd(env.PRICE_PER_TOOL_USD || env.PRICE?.replace("$", ""));
   const pay = resolvePayConfig(env);
   const facilitatorUrl =
@@ -339,16 +360,24 @@ export async function createLivePaymentGate(env: Env): Promise<PaymentGate> {
     server.register(pay.solanaNetwork, new ExactSvmScheme());
   }
   await server.initialize();
+  const fixedUsd = opts.fixedUsd;
+  const pricingModel = opts.pricingModel || (fixedUsd != null ? "fixed" : "per_tool");
+  const maxTimeout = opts.maxTimeoutSeconds ?? (fixedUsd != null ? 120 : 60);
 
   return {
     async buildAccepts(toolCount: number) {
-      const price = money(toolCount * unit);
+      const n = Math.max(1, toolCount);
+      const total = fixedUsd != null ? fixedUsd : n * unit;
+      const price = money(total);
       const commonExtra = {
-        pricePerToolUsd: unit,
-        pricingModel: "per_tool",
-        chargedTools: toolCount,
+        pricePerToolUsd: fixedUsd != null ? fixedUsd : unit,
+        pricingModel,
+        chargedTools: fixedUsd != null ? 1 : n,
         batchNote:
-          "MCP batch tools charge N×unit in ONE Exact settlement (not N separate txs).",
+          fixedUsd != null
+            ? "Fixed Exact settlement for this tool."
+            : "MCP batch tools charge N×unit in ONE Exact settlement (not N separate txs).",
+        ...(opts.extra || {}),
       };
       const options: Array<{
         scheme: string;
@@ -363,7 +392,7 @@ export async function createLivePaymentGate(env: Env): Promise<PaymentGate> {
           payTo: pay.evmPayTo,
           price,
           network: pay.evmNetwork,
-          maxTimeoutSeconds: 60,
+          maxTimeoutSeconds: maxTimeout,
           extra: {
             ...commonExtra,
             assetHint: "USDC",
@@ -377,7 +406,7 @@ export async function createLivePaymentGate(env: Env): Promise<PaymentGate> {
           payTo: pay.solanaPayTo,
           price,
           network: pay.solanaNetwork,
-          maxTimeoutSeconds: 60,
+          maxTimeoutSeconds: maxTimeout,
           extra: {
             ...commonExtra,
             assetHint: "USDC",

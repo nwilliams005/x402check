@@ -21,3 +21,6 @@ SERVICE_NAME = "x402check (dev/testnet)"
 binding = "PAYTO_HISTORY"
 id = "00000000000000000000000000000000"
 preview_id = "00000000000000000000000000000000"
+
+[triggers]
+crons = ["0 6 * * *"]

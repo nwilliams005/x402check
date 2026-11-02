@@ -1,3 +1,6 @@
+import type { StatsSnapshot } from "./stats";
+import { formatStatsLine } from "./stats";
+
 export const styleCss = `*{box-sizing:border-box}body{margin:0;font:16px/1.5 ui-sans-serif,system-ui;color:#e8eef7;background:#070b12}
 .bg{position:fixed;inset:0;background:radial-gradient(800px 400px at 20% -10%,#1a3a5c55,transparent),radial-gradient(600px 300px at 90% 10%,#0d4f3c33,transparent);pointer-events:none;z-index:-1}
 .wrap{max-width:920px;margin:0 auto;padding:0 1.25rem}.nav{display:flex;justify-content:space-between;align-items:center;padding:1.25rem 1.25rem 0}
@@ -12,7 +15,10 @@ h1 span{color:#7dd3a7}.lede{color:#9fb3c8;max-width:38rem}.eyebrow{text-transfor
 .card p{margin:0;color:#9fb3c8;font-size:.9rem}.fine{color:#7a8ea3;font-size:.85rem}.foot{display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:2rem 1.25rem;border-top:1px solid #1a2433;color:#7a8ea3;font-size:.85rem}
 .foot a{color:#7dd3a7}code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}pre{background:#0e1520;border:1px solid #1e2a3a;padding:1rem;border-radius:8px;overflow:auto}
 .docs{padding:2rem 1.25rem 4rem}h2{margin-top:2rem}.faq details{background:#0e1520;border:1px solid #1e2a3a;border-radius:10px;padding:.75rem 1rem;margin:.6rem 0}
-.faq summary{cursor:pointer;font-weight:600}.faq p{color:#9fb3c8;margin:.5rem 0 0}`;
+.faq summary{cursor:pointer;font-weight:600}.faq p{color:#9fb3c8;margin:.5rem 0 0}
+.stats-card{margin:1.5rem 0 0}.stats-card .kicker{text-transform:uppercase;letter-spacing:.12em;font-size:.72rem;color:#7dd3a7;margin:0 0 .4rem}
+.stats-line{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9rem;color:#c5d4e5;margin:0}
+.tiny{font-size:.78rem;margin:.45rem 0 0}.muted{color:#7a8ea3}.stats-card a{color:#7dd3a7}`;
 
 function headTags(opts: {
   origin: string;
@@ -143,7 +149,19 @@ function softwareJsonLd(origin: string, pricePerTool: number) {
   };
 }
 
-export function landingHtml(origin: string, pricePerTool: number): string {
+export function landingHtml(
+  origin: string,
+  pricePerTool: number,
+  stats?: StatsSnapshot | null,
+): string {
+  const statsLine = stats ? formatStatsLine(stats) : "";
+  const statsBlock = stats
+    ? `<section class="card stats-card" aria-label="Live usage stats">
+      <div class="kicker">Live stats</div>
+      <p class="stats-line">${statsLine}</p>
+      <p class="muted tiny">Real counts from our checks · <a href="/stats">JSON /stats</a> · optional <a href="/docs">$5/30d watch</a></p>
+    </section>`
+    : "";
   const description =
     "Agents pay per tool checked. Compact verdict + history before any x402 payment. Verify payTo, detect price drift, check uptime, compare sellers, budget guard — is this x402 endpoint safe?";
   return `<!DOCTYPE html>
@@ -178,6 +196,7 @@ ${headTags({
       <em>is this x402 endpoint safe</em>, <em>verify payTo</em>, detect drift, compare sellers,
       or keep a budget guard before signing USDC on Base.
     </p>
+    ${statsBlock}
     <div class="cta-row">
       <a class="btn primary" href="/docs">Docs for agents</a>
       <code class="chip">GET ${origin}/preflight?url=…</code>
@@ -209,6 +228,10 @@ ${headTags({
       <details>
         <summary>How do I pay for a check?</summary>
         <p>Unauthenticated calls return HTTP 402. Decode <code>PAYMENT-REQUIRED</code>, sign Exact USDC on Base (see body.accepts[] / PAYMENT-REQUIRED), retry with <code>PAYMENT-SIGNATURE</code>. See <a href="/openapi.json">OpenAPI</a>.</p>
+      </details>
+      <details>
+        <summary>Can I watch a seller over time?</summary>
+        <p>Optional: <code>POST /watch</code> with <code>{url, webhookUrl}</code> — $5 Exact USDC buys 30 days of daily re-checks. Webhook on payTo, price, network, or availability change. Status: <code>GET /watch?id=…</code>.</p>
       </details>
     </section>
     <p class="fine">We never pay the target. Agents-first brand. Markdown twin: <a href="/index.md">/index.md</a>.</p>

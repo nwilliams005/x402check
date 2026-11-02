@@ -355,6 +355,7 @@ export function sitemapXml(origin: string, lastmod: string): string {
   const urls = [
     "/",
     "/docs",
+    "/stats",
     "/example",
     "/llms.txt",
     "/llms-full.txt",

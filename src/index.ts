@@ -11,15 +11,28 @@ import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import type { HTTPRequestContext } from "@x402/core/server";
 import type { Env, ToolCheck } from "./types";
 import { createFacilitatorClient } from "./facilitator";
-import { baseAcceptRequirement, buildAccepts, resolvePayConfig } from "./payconfig";
+import { baseAcceptRequirement, buildAccepts, resolvePayConfig, USDC_BASE_MAINNET } from "./payconfig";
 import { checkTool, isBlockedHost } from "./preflight";
 import {
   DEFAULT_PRICE_PER_TOOL_USD,
   MAX_BATCH,
+  WATCH_PRICE_USD,
   dynamicPriceForRequest,
+  money,
   unitPriceUsd,
 } from "./sell";
 import { docsHtml, landingHtml, styleCss } from "./pages";
+import { loadStats, recordCheckStats } from "./stats";
+import {
+  WATCH_DURATION_MS,
+  WATCH_PRICE_ATOMIC,
+  createWatch,
+  loadWatch,
+  publicWatch,
+  renewWatch,
+  runWatchCron,
+  watchAcceptRequirement,
+} from "./watch";
 import {
   docsMarkdown,
   landingMarkdown,
@@ -100,6 +113,39 @@ app.use("/mcp", async (c, next) => {
   await next();
 });
 
+app.use("/watch", async (c, next) => {
+  bridgeLegacyPaymentHeader(c);
+  await next();
+});
+
+app.use("/watch/renew", async (c, next) => {
+  bridgeLegacyPaymentHeader(c);
+  await next();
+});
+
+
+/** Free live stats — real counters from our KV. Never fabricated. */
+app.get("/stats", async (c) => {
+  const stats = await loadStats(c.env.PAYTO_HISTORY);
+  return c.json(
+    {
+      ...stats,
+      source: "kv",
+      note: "Counts are from completed checks on this deployment. Small numbers are shown honestly.",
+      watch: {
+        priceUsd: WATCH_PRICE_USD,
+        durationDays: 30,
+        endpoint: "/watch",
+      },
+    },
+    200,
+    {
+      "Cache-Control": "public, max-age=30",
+      "Access-Control-Allow-Origin": "*",
+    },
+  );
+});
+
 /** Free static sample — never hits sell()/KV; safe for agents that need a shape before paying. */
 app.get("/example", (c) => {
   return c.json(exampleToolCheck(originOf(c), unit(c.env)), 200, {
@@ -141,9 +187,10 @@ app.get("/assets/icon.svg", (c) =>
   }),
 );
 
-app.get("/", (c) => {
+app.get("/", async (c) => {
   const origin = originOf(c);
-  const html = landingHtml(origin, unit(c.env));
+  const stats = await loadStats(c.env.PAYTO_HISTORY);
+  const html = landingHtml(origin, unit(c.env), stats);
   return c.html(html, 200, {
     Link: `<${origin}/llms.txt>; rel="describedby", <${origin}/index.md>; rel="alternate"; type="text/markdown"`,
   });
@@ -367,10 +414,118 @@ function paymentRoutes(env: Env, origin: string) {
       },
       accepts,
     },
+    "POST /watch": {
+      description:
+        `Watch one x402 seller URL for 30 days ($${WATCH_PRICE_USD} Exact USDC). Daily re-check; webhook on payTo/price/network/availability change. Optional after a one-shot preflight.`,
+      mimeType: "application/json",
+      serviceName,
+      tags: [...tags, "watch", "subscription", "alert"],
+      iconUrl,
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: {
+            url: "https://www.api-xpay.com/x402/ping",
+            webhookUrl: "https://hooks.example/x402check",
+          },
+          inputSchema: {
+            properties: {
+              url: {
+                type: "string",
+                description: "Absolute https URL of the x402 seller to watch",
+              },
+              webhookUrl: {
+                type: "string",
+                description: "https webhook for change alerts",
+              },
+              email: {
+                type: "string",
+                description: "Optional contact email (stored; webhook is the live alert channel)",
+              },
+            },
+            required: ["url"],
+          },
+          bodyType: "json",
+          output: {
+            example: {
+              watchId: "abc123",
+              url: "https://www.api-xpay.com/x402/ping",
+              expiresAt: "2026-12-01T00:00:00.000Z",
+              priceUsd: WATCH_PRICE_USD,
+              durationDays: 30,
+            },
+          },
+        }),
+      },
+      accepts: [
+        {
+          scheme: "exact",
+          price: money(WATCH_PRICE_USD),
+          network: pay.evmNetwork,
+          payTo: pay.evmPayTo,
+          maxTimeoutSeconds: 120,
+          extra: {
+            priceUsd: WATCH_PRICE_USD,
+            pricingModel: "watch_30d",
+            durationDays: 30,
+            assetHint: "USDC",
+            chainFamily: "evm",
+            product: "watch",
+          },
+        },
+      ],
+    },
+    "POST /watch/renew": {
+      description:
+        `Renew an existing watch for another 30 days ($${WATCH_PRICE_USD} Exact USDC).`,
+      mimeType: "application/json",
+      serviceName,
+      tags: [...tags, "watch", "renew"],
+      iconUrl,
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { watchId: "abc123" },
+          inputSchema: {
+            properties: {
+              watchId: { type: "string", description: "Watch id from POST /watch" },
+              id: { type: "string", description: "Alias of watchId" },
+            },
+            required: ["watchId"],
+          },
+          bodyType: "json",
+          output: {
+            example: {
+              watchId: "abc123",
+              expiresAt: "2026-12-31T00:00:00.000Z",
+              renewed: true,
+            },
+          },
+        }),
+      },
+      accepts: [
+        {
+          scheme: "exact",
+          price: money(WATCH_PRICE_USD),
+          network: pay.evmNetwork,
+          payTo: pay.evmPayTo,
+          maxTimeoutSeconds: 120,
+          extra: {
+            priceUsd: WATCH_PRICE_USD,
+            pricingModel: "watch_30d",
+            durationDays: 30,
+            product: "watch_renew",
+          },
+        },
+      ],
+    },
   };
 }
 
-app.use("/preflight", async (c, next) => {
+/** Shared x402 payment middleware factory for paid routes. */
+async function withPayment(
+  c: any,
+  next: () => Promise<void>,
+  routeFilter?: (methodPath: string) => boolean,
+) {
   if (await maybeBypass(c)) {
     c.set("localBypass" as never, true as never);
     return next();
@@ -390,13 +545,19 @@ app.use("/preflight", async (c, next) => {
     new ExactEvmScheme(),
   );
   if (pay.solanaPayTo && pay.solanaNetwork) {
-    // feePayer comes from facilitator /supported via ExactSvmScheme.enhancePaymentRequirements
     server.register(pay.solanaNetwork, new ExactSvmScheme());
   }
   await server.initialize();
 
+  let routes = paymentRoutes(c.env, origin) as Record<string, unknown>;
+  if (routeFilter) {
+    routes = Object.fromEntries(
+      Object.entries(routes).filter(([k]) => routeFilter(k)),
+    );
+  }
+
   const mw = paymentMiddleware(
-    paymentRoutes(c.env, origin),
+    routes as any,
     server,
     undefined,
     undefined,
@@ -404,8 +565,6 @@ app.use("/preflight", async (c, next) => {
   );
   const out = await mw(c, next);
 
-  // Enrich 402 JSON bodies: include non-empty accepts[] (x402dash + agents).
-  // Keep PAYMENT-REQUIRED / other headers from the middleware.
   const res = out instanceof Response ? out : c.res;
   if (res && res.status === 402) {
     const headers = new Headers(res.headers);
@@ -426,19 +585,51 @@ app.use("/preflight", async (c, next) => {
           );
         }
       } catch {
-        /* fall through to static Base accept */
+        /* fall through */
       }
     }
+    const path = new URL(c.req.url).pathname;
     if (!accepts.length) {
-      accepts = [baseAcceptRequirement(pay, unit(c.env))];
+      if (path.startsWith("/watch")) {
+        accepts = [
+          watchAcceptRequirement(pay.evmPayTo, pay.evmNetwork, USDC_BASE_MAINNET),
+        ];
+      } else {
+        accepts = [baseAcceptRequirement(pay, unit(c.env))];
+      }
     }
 
-    return new Response(
-      JSON.stringify(paymentRequiredBody(origin, unit(c.env), accepts)),
-      { status: 402, headers },
-    );
+    const body =
+      path.startsWith("/watch")
+        ? {
+            ...paymentRequiredBody(origin, WATCH_PRICE_USD, accepts),
+            product: "watch",
+            priceUsd: WATCH_PRICE_USD,
+            durationDays: 30,
+            amountAtomic: WATCH_PRICE_ATOMIC,
+            note: "One Exact USDC payment buys 30 days of daily re-checks for one tool URL.",
+          }
+        : paymentRequiredBody(origin, unit(c.env), accepts);
+
+    return new Response(JSON.stringify(body), { status: 402, headers });
   }
   return out;
+}
+
+app.use("/preflight", async (c, next) =>
+  withPayment(c, next, (k) => k.includes("/preflight")),
+);
+
+app.use("/watch/renew", async (c, next) => {
+  if (c.req.method !== "POST") return next();
+  return withPayment(c, next, (k) => k === "POST /watch/renew");
+});
+
+app.use("/watch", async (c, next) => {
+  if (c.req.method !== "POST") return next();
+  // Exact /watch only — renew has its own middleware above
+  if (new URL(c.req.url).pathname !== "/watch") return next();
+  return withPayment(c, next, (k) => k === "POST /watch");
 });
 
 app.get("/preflight", async (c) => {
@@ -466,8 +657,24 @@ app.get("/preflight", async (c) => {
   const forceLive = c.req.query("fresh") === "1" || c.req.query("fresh") === "true";
   const t0 = Date.now();
   const result = await checkTool(url, c.env, { forceLive });
+  const bypass =
+    c.env.ALLOW_LOCAL_BYPASS === "true" &&
+    (c.req.header("x-local-dev-bypass") === "1" ||
+      c.req.query("local_bypass") === "1");
+  await recordCheckStats(c.env.PAYTO_HISTORY, {
+    verdict: result.verdict,
+    paid: !bypass,
+    isNewTool: result.history.checks === 1,
+  });
   c.header("Server-Timing", `app;dur=${Date.now() - t0}`);
-  return c.json(result);
+  // Helpful, never pushy: one plain mention of watch
+  return c.json({
+    ...result,
+    watchHint:
+      "Optional: POST /watch {url, webhookUrl} — $" +
+      WATCH_PRICE_USD +
+      "/30d daily re-check + webhook on payTo/price/network/availability change.",
+  });
 });
 
 app.post("/preflight", async (c) => {
@@ -525,6 +732,18 @@ app.post("/preflight", async (c) => {
     results.push(await checkTool(url, c.env, { forceLive }));
   }
 
+  const bypass =
+    c.env.ALLOW_LOCAL_BYPASS === "true" &&
+    (c.req.header("x-local-dev-bypass") === "1" ||
+      c.req.query("local_bypass") === "1");
+  for (const r of results) {
+    await recordCheckStats(c.env.PAYTO_HISTORY, {
+      verdict: r.verdict,
+      paid: !bypass,
+      isNewTool: r.history.checks === 1,
+    });
+  }
+
   return c.json({
     results,
     chargedTools: list.length,
@@ -533,6 +752,99 @@ app.post("/preflight", async (c) => {
     elapsedMs: Date.now() - t0,
     pricingNote:
       "Exact scheme: one settlement covering N×unit for this HTTP request (not N separate txs).",
+    watchHint:
+      "Optional: POST /watch {url, webhookUrl} — $" +
+      WATCH_PRICE_USD +
+      "/30d daily re-check + webhook on change.",
+  });
+});
+
+/** Create a 30-day watch ($5 Exact). Payment middleware runs first. */
+app.post("/watch", async (c) => {
+  let body: { url?: unknown; webhookUrl?: unknown; email?: unknown } = {};
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid_json" }, 400);
+  }
+  const url = typeof body.url === "string" ? body.url.trim() : "";
+  const webhookUrl =
+    typeof body.webhookUrl === "string" ? body.webhookUrl.trim() : null;
+  const email = typeof body.email === "string" ? body.email.trim() : null;
+  const created = await createWatch(c.env, { url, webhookUrl, email });
+  if (!created.ok) {
+    const status = created.error === "blocked_host" || created.error === "invalid_url" ? 400 : 400;
+    return c.json({ error: created.error, message: created.message }, status);
+  }
+  return c.json({
+    watchId: created.watch.id,
+    url: created.watch.url,
+    expiresAt: created.watch.expiresAt,
+    createdAt: created.watch.createdAt,
+    priceUsd: WATCH_PRICE_USD,
+    durationDays: 30,
+    webhookUrl: created.watch.webhookUrl,
+    email: created.watch.email,
+    baseline: created.watch.baseline,
+    initialCheck: created.check,
+    statusUrl: `/watch?id=${created.watch.id}`,
+    renewUrl: "/watch/renew",
+    note: "Daily re-check for 30 days. Webhook fires on payTo/price/network/availability change.",
+  });
+});
+
+/** Free watch status lookup. */
+app.get("/watch", async (c) => {
+  const id = (c.req.query("id") || c.req.query("watchId") || "").trim();
+  if (!id) {
+    return c.json(
+      {
+        error: "missing_id",
+        message: "Query id= (watch id). To create: POST /watch {url, webhookUrl} ($5/30d).",
+        priceUsd: WATCH_PRICE_USD,
+        durationDays: 30,
+      },
+      400,
+    );
+  }
+  const rec = await loadWatch(c.env.PAYTO_HISTORY, id);
+  if (!rec) return c.json({ error: "not_found" }, 404);
+  const expired = Date.parse(rec.expiresAt) < Date.now();
+  return c.json({
+    ...publicWatch(rec),
+    expired,
+    active: rec.active && !expired,
+  });
+});
+
+/** Renew watch for another 30 days ($5 Exact). */
+app.post("/watch/renew", async (c) => {
+  let body: { watchId?: unknown; id?: unknown } = {};
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid_json" }, 400);
+  }
+  const watchId =
+    (typeof body.watchId === "string" && body.watchId.trim()) ||
+    (typeof body.id === "string" && body.id.trim()) ||
+    "";
+  if (!watchId) {
+    return c.json({ error: "missing_watchId", message: "Body watchId required" }, 400);
+  }
+  const renewed = await renewWatch(c.env, watchId);
+  if (!renewed.ok) {
+    const status = renewed.error === "not_found" ? 404 : 400;
+    return c.json({ error: renewed.error, message: renewed.message }, status);
+  }
+  return c.json({
+    watchId: renewed.watch.id,
+    url: renewed.watch.url,
+    expiresAt: renewed.watch.expiresAt,
+    renewed: true,
+    priceUsd: WATCH_PRICE_USD,
+    durationDays: 30,
+    baseline: renewed.watch.baseline,
   });
 });
 
@@ -550,5 +862,19 @@ app.notFound((c) => {
 
 // silence unused import when DEFAULT_PRICE is only used via sell.ts defaults
 void DEFAULT_PRICE_PER_TOOL_USD;
+void WATCH_DURATION_MS;
 
-export default app;
+export default {
+  fetch: app.fetch,
+  async scheduled(
+    _controller: ScheduledController,
+    env: Env,
+    ctx: ExecutionContext,
+  ) {
+    ctx.waitUntil(
+      runWatchCron(env).then((s) => {
+        console.log("watch-cron", JSON.stringify(s));
+      }),
+    );
+  },
+};

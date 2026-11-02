@@ -79,3 +79,8 @@ export async function dynamicPriceForRequest(
   const n = Math.max(1, tools.length); // charge at least 1 if they hit paid route
   return money(n * unitUsd);
 }
+
+/** Watch subscription: $5 Exact USDC buys 30 days of daily re-checks per URL. */
+export const WATCH_PRICE_USD = 5;
+export const WATCH_PRICE_ATOMIC = "5000000";
+export const WATCH_DURATION_DAYS = 30;

@@ -27,3 +27,6 @@ SERVICE_NAME = "x402check"
 binding = "PAYTO_HISTORY"
 id = "8f4f73f6432e4020a313131d52bab27d"
 preview_id = "8f4f73f6432e4020a313131d52bab27d"
+
+[triggers]
+crons = ["0 6 * * *"]

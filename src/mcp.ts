@@ -16,10 +16,14 @@ import {
   PAID_BATCH_TOOLS,
   PAID_SINGLE_TOOLS,
   PAID_TOOLS,
+  PAID_WATCH_TOOLS,
   billableToolCount,
   createLivePaymentGate,
   gatePaidToolCall,
 } from "./mcp-payment";
+import { createWatch } from "./watch";
+import { WATCH_PRICE_USD } from "./sell";
+import { recordCheckStats } from "./stats";
 
 type JsonRpc = {
   jsonrpc?: string;
@@ -167,6 +171,40 @@ function toolList(price: number) {
           x402: { transport: "mcp", metaKey: "x402/payment" },
         },
       },
+      {
+        name: "watch_tool",
+        description:
+          "Subscribe to daily re-checks of one x402 seller URL for 30 days. Alerts your webhook when payTo, price, network, or availability changes. Fixed $" +
+          String(WATCH_PRICE_USD) +
+          " USDC Exact (not per-check). Optional after a one-shot preflight when you will revisit the same seller.",
+        inputSchema: {
+          type: "object",
+          required: ["url"],
+          properties: {
+            url: URL_PROP,
+            webhookUrl: {
+              type: "string",
+              description: "https URL that receives POST JSON alerts on change",
+            },
+            email: {
+              type: "string",
+              description:
+                "Optional contact email stored for future alerts (webhook is the live channel today)",
+            },
+          },
+        },
+        annotations: {
+          title: "Watch x402 tool for 30 days",
+          readOnlyHint: false,
+          openWorldHint: true,
+          destructiveHint: false,
+        },
+        _meta: {
+          priceUsd: WATCH_PRICE_USD,
+          billsAs: "watch_30d",
+          x402: { transport: "mcp", metaKey: "x402/payment" },
+        },
+      },
     ],
   };
 }
@@ -224,15 +262,31 @@ async function runBatch(
   };
 }
 
+async function recordOneStat(
+  env: Env,
+  check: ToolCheck,
+  paid: boolean,
+): Promise<void> {
+  await recordCheckStats(env.PAYTO_HISTORY, {
+    verdict: check.verdict,
+    paid,
+    // history.checks === 1 means this URL's first recorded live probe
+    isNewTool: check.history.checks === 1,
+  });
+}
+
 async function executePaidTool(
   name: string,
   args: Record<string, unknown>,
   env: Env,
   price: number,
+  paid: boolean,
 ): Promise<unknown> {
   if (PAID_SINGLE_TOOLS.has(name)) {
     const url = typeof args.url === "string" ? args.url.trim() : "";
-    return runOne(url, env, args.fresh === true);
+    const check = await runOne(url, env, args.fresh === true);
+    await recordOneStat(env, check, paid);
+    return check;
   }
   if (PAID_BATCH_TOOLS.has(name)) {
     const list = Array.isArray(args.urls)
@@ -248,7 +302,32 @@ async function executePaidTool(
       deduped.push(u);
       if (deduped.length >= MAX_BATCH) break;
     }
-    return runBatch(deduped, env, args.fresh === true, price);
+    const batch = await runBatch(deduped, env, args.fresh === true, price);
+    for (const check of batch.results) {
+      await recordOneStat(env, check, paid);
+    }
+    return batch;
+  }
+  if (PAID_WATCH_TOOLS.has(name)) {
+    const url = typeof args.url === "string" ? args.url.trim() : "";
+    const webhookUrl =
+      typeof args.webhookUrl === "string" ? args.webhookUrl.trim() : null;
+    const email = typeof args.email === "string" ? args.email.trim() : null;
+    const created = await createWatch(env, { url, webhookUrl, email });
+    if (!created.ok) {
+      throw new Error(`${created.error}: ${created.message}`);
+    }
+    return {
+      watchId: created.watch.id,
+      url: created.watch.url,
+      expiresAt: created.watch.expiresAt,
+      priceUsd: WATCH_PRICE_USD,
+      durationDays: 30,
+      webhookUrl: created.watch.webhookUrl,
+      baseline: created.watch.baseline,
+      statusUrl: `/watch?id=${created.watch.id}`,
+      note: "Daily re-check for 30 days. Webhook fires on payTo/price/network/availability change. Renew with POST /watch/renew.",
+    };
   }
   throw new Error(`Unknown paid tool: ${name}`);
 }
@@ -268,6 +347,7 @@ export async function handleMcp(c: Context<{ Bindings: Env }>) {
         "verify_payto",
         "preflight_batch",
         "compare_tools",
+        "watch_tool",
       ],
     });
   }
@@ -290,10 +370,10 @@ export async function handleMcp(c: Context<{ Bindings: Env }>) {
         capabilities: { tools: {} },
         serverInfo: {
           name: "x402check",
-          version: "0.2.3",
+          version: "0.3.0",
         },
         instructions:
-          `Before any x402 payment, call preflight_check (or verify_payto). To compare sellers, call compare_tools / preflight_batch. Unit $${price}/URL via x402 Exact on MCP tools/call: unpaid calls return PaymentRequired (structuredContent.accepts); retry with params._meta["x402/payment"]. Deny pay when verdict=avoid; escalate on caution; still enforce maxAmount on ok. We probe the endpoint's live 402 + history (not wallet OFAC/simulation).`,
+          `Before any x402 payment, call preflight_check (or verify_payto). To compare sellers, call compare_tools / preflight_batch. Optional watch_tool ($${WATCH_PRICE_USD}/30d) re-checks daily and webhooks on payTo/price/network/availability change. Unit $${price}/URL via x402 Exact on MCP tools/call: unpaid calls return PaymentRequired (structuredContent.accepts); retry with params._meta["x402/payment"]. Deny pay when verdict=avoid; escalate on caution; still enforce maxAmount on ok. We probe the endpoint's live 402 + history (not wallet OFAC/simulation). Live stats: /stats.`,
       }),
     );
   }
@@ -343,14 +423,28 @@ export async function handleMcp(c: Context<{ Bindings: Env }>) {
         );
       }
     }
+    if (PAID_WATCH_TOOLS.has(name)) {
+      const url = typeof args.url === "string" ? args.url.trim() : "";
+      if (!url) {
+        return c.json(
+          ok(id, {
+            content: [{ type: "text", text: "missing url" }],
+            isError: true,
+          }),
+        );
+      }
+    }
 
     const bypass =
       c.env.ALLOW_LOCAL_BYPASS === "true" &&
       (c.req.header("x-local-dev-bypass") === "1" ||
         c.req.query("local_bypass") === "1");
 
+    const isWatch = PAID_WATCH_TOOLS.has(name);
+    const unitForGate = isWatch ? WATCH_PRICE_USD : price;
+
     if (bypass) {
-      const data = await executePaidTool(name, args, c.env, price);
+      const data = await executePaidTool(name, args, c.env, price, false);
       return c.json(
         ok(id, {
           content: [{ type: "text", text: JSON.stringify(data) }],
@@ -360,16 +454,26 @@ export async function handleMcp(c: Context<{ Bindings: Env }>) {
     }
 
     const toolCount = billableToolCount(name, args);
-    const gate = await createLivePaymentGate(c.env);
+    const gate = await createLivePaymentGate(
+      c.env,
+      isWatch
+        ? {
+            fixedUsd: WATCH_PRICE_USD,
+            pricingModel: "watch_30d",
+            maxTimeoutSeconds: 120,
+            extra: { durationDays: 30, product: "watch" },
+          }
+        : {},
+    );
     const result = await gatePaidToolCall({
       toolName: name,
       args,
       meta,
       description: `x402check ${name}`,
-      unitUsd: price,
-      toolCount,
+      unitUsd: unitForGate,
+      toolCount: isWatch ? 1 : toolCount,
       gate,
-      run: () => executePaidTool(name, args, c.env, price),
+      run: () => executePaidTool(name, args, c.env, price, true),
     });
     return c.json(ok(id, result));
   }
