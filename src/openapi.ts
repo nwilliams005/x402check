@@ -203,7 +203,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
           tags: ["stats"],
           summary: "Live aggregate check stats (real KV counts, never padded)",
           description:
-            "Returns totalChecks, paidChecks, toolsChecked, flaggedOk/caution/avoid, and last-24h counters. " +
+            "Returns totalChecks, paidChecks, toolsChecked, flaggedOk/caution/avoid, last-24h counters, and optional verified onChain Base USDC transfer snapshot. " +
             "Counts start from when stats recording shipped; small numbers are shown honestly.",
           security: [],
           responses: {
@@ -442,6 +442,12 @@ export function openApiSpec(origin: string, pricePerTool: number) {
           properties: {
             totalChecks: { type: "integer" },
             paidChecks: { type: "integer" },
+            onChain: {
+              type: "object",
+              nullable: true,
+              description:
+                "Verified Base USDC Transfer snapshot to payTo (seeded from eth_getLogs). Never fabricated.",
+            },
             toolsChecked: { type: "integer" },
             flaggedOk: { type: "integer" },
             flaggedCaution: { type: "integer" },
@@ -834,7 +840,7 @@ curl -sS -X POST '${origin}/preflight' \\
 Optional. POST /watch {url, webhookUrl} with $5 Exact USDC buys 30 days of daily re-checks. Webhook fires on payTo/price/network/availability change. MCP tool: watch_tool. Renew with POST /watch/renew. Email is stored for a future channel; webhook is live today.
 
 ### Where are live stats?
-GET /stats returns real KV aggregates (totalChecks, paidChecks, toolsChecked, flagged caution/avoid, last-24h). Numbers are never fabricated or padded.
+GET /stats returns real KV aggregates (totalChecks, paidChecks, toolsChecked, flagged caution/avoid, last-24h) plus optional onChain (verified Base USDC transfers to payTo). Numbers are never fabricated or padded.
 
 `;
 }

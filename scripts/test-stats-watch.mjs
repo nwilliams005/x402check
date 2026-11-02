@@ -5,9 +5,12 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
+  formatOnChainLine,
   formatStatsLine,
+  loadOnChainStats,
   loadStats,
   recordCheckStats,
+  ONCHAIN_KEY,
 } from "../src/stats.ts";
 import {
   WATCH_PRICE_ATOMIC,
@@ -164,4 +167,31 @@ test("watch price is $5 / 5000000 atomic", () => {
   assert.equal(req.extra.priceUsd, 5);
   assert.equal(req.extra.pricingModel, "watch_30d");
   assert.equal(watchKey("abc"), "watch:sub:abc");
+});
+
+
+test("formatOnChainLine and loadOnChainStats", async () => {
+  const kv = memoryKv();
+  assert.equal(await loadOnChainStats(undefined), null);
+  assert.equal(await loadOnChainStats(kv), null);
+  const snap = {
+    paidTransfers: 5,
+    usdcTotal: 0.01,
+    uniquePayers: 4,
+    internalTestTransfers: 2,
+    asOf: "2026-11-01T19:00:00.000Z",
+    source: "base_usdc_transfers",
+    network: "eip155:8453",
+    payTo: "0xd98451514c7510e3fCd0463De973B9a6bB89A86f",
+    asset: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    transfers: [],
+  };
+  await kv.put(ONCHAIN_KEY, JSON.stringify(snap));
+  const loaded = await loadOnChainStats(kv);
+  assert.equal(loaded.paidTransfers, 5);
+  const s = await loadStats(kv);
+  assert.equal(s.onChain.paidTransfers, 5);
+  assert.match(formatOnChainLine(snap), /5 paid on-chain/);
+  assert.match(formatOnChainLine(snap), /\$0\.010 USDC/);
+  assert.match(formatOnChainLine(snap), /4 wallets/);
 });

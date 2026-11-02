@@ -124,14 +124,25 @@ app.use("/watch/renew", async (c, next) => {
 });
 
 
-/** Free live stats — real counters from our KV. Never fabricated. */
+/** Free live stats — real counters from our KV (+ optional verified on-chain). Never fabricated. */
 app.get("/stats", async (c) => {
   const stats = await loadStats(c.env.PAYTO_HISTORY);
+  const onChain = stats.onChain ?? null;
+  const noteParts = [
+    "KV counters from completed checks (seeded from verified history when counters started at zero).",
+  ];
+  if (stats.noteDetail) noteParts.push(stats.noteDetail);
+  if (onChain) {
+    noteParts.push(
+      `paid on-chain: ${onChain.paidTransfers} Base USDC transfers to payTo ($${onChain.usdcTotal.toFixed(3)}, ${onChain.uniquePayers} wallets, asOf ${onChain.asOf}).`,
+    );
+  }
   return c.json(
     {
       ...stats,
-      source: "kv",
-      note: "Counts are from completed checks on this deployment. Small numbers are shown honestly.",
+      onChain,
+      source: onChain ? "kv+base_usdc" : "kv",
+      note: noteParts.join(" "),
       watch: {
         priceUsd: WATCH_PRICE_USD,
         durationDays: 30,

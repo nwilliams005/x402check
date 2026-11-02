@@ -11,7 +11,9 @@
     "deploy:dry": "echo 'See DEPLOY.md \u2014 do not deploy without Nicklaus approval'",
     "test:payconfig": "node scripts/test-payconfig.mjs",
     "test:mcp-payment": "npx --yes tsx scripts/test-mcp-payment.mjs",
-    "test:stats-watch": "npx --yes tsx scripts/test-stats-watch.mjs"
+    "test:stats-watch": "npx --yes tsx scripts/test-stats-watch.mjs",
+    "seed:stats": "node scripts/seed-stats.mjs",
+    "seed:stats:write": "node scripts/seed-stats.mjs --write"
   },
   "dependencies": {
     "@coinbase/cdp-sdk": "^1.60.0",

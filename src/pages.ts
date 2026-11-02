@@ -1,5 +1,5 @@
 import type { StatsSnapshot } from "./stats";
-import { formatStatsLine } from "./stats";
+import { formatOnChainLine, formatStatsLine } from "./stats";
 
 export const styleCss = `*{box-sizing:border-box}body{margin:0;font:16px/1.5 ui-sans-serif,system-ui;color:#e8eef7;background:#070b12}
 .bg{position:fixed;inset:0;background:radial-gradient(800px 400px at 20% -10%,#1a3a5c55,transparent),radial-gradient(600px 300px at 90% 10%,#0d4f3c33,transparent);pointer-events:none;z-index:-1}
@@ -155,11 +155,19 @@ export function landingHtml(
   stats?: StatsSnapshot | null,
 ): string {
   const statsLine = stats ? formatStatsLine(stats) : "";
+  const onChainLine =
+    stats?.onChain != null ? formatOnChainLine(stats.onChain) : "";
+  const noteBits = [
+    stats?.noteDetail || null,
+    onChainLine || null,
+    "Real counts only — never padded",
+  ].filter(Boolean);
   const statsBlock = stats
     ? `<section class="card stats-card" aria-label="Live usage stats">
       <div class="kicker">Live stats</div>
       <p class="stats-line">${statsLine}</p>
-      <p class="muted tiny">Real counts from our checks · <a href="/stats">JSON /stats</a> · optional <a href="/docs">$5/30d watch</a></p>
+      ${onChainLine ? `<p class="stats-line">${onChainLine}</p>` : ""}
+      <p class="muted tiny">${noteBits.join(" · ")} · <a href="/stats">JSON /stats</a> · optional <a href="/docs">$5/30d watch</a></p>
     </section>`
     : "";
   const description =
