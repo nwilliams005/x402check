@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "x402check": {
+      "command": "npx",
+      "args": ["-y", "x402check-mcp"]
+    }
+  }
+}
