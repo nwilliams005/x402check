@@ -244,7 +244,7 @@ export async function redeemFreeCheck(
     method: verified.method,
   };
   // Write claim BEFORE running the probe so a crash mid-probe still burns the free check
-  // (prevents replay). Probe failures still consume the free check — documented.
+  // (prevents replay). Probe failures still consume the free check · documented.
   await env.PAYTO_HISTORY.put(claimKey(addr), JSON.stringify(claim));
   // Invalidate challenge
   await env.PAYTO_HISTORY.put(challengeKey(addr, opts.nonce), "", {

@@ -4,7 +4,7 @@
  * on-chain USDC-to-payTo sample). Watch remains $5 / 30 days.
  *
  * Limitation: x402 Exact settles ONE amount per HTTP request. Batch POST charges
- * N × unit as a single DynamicPrice payment — not N separate on-chain settlements.
+ * N × unit as a single DynamicPrice payment · not N separate on-chain settlements.
  */
 import type { HTTPRequestContext } from "@x402/core/server";
 

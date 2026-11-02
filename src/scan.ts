@@ -1,7 +1,7 @@
 /**
  * Internal ecosystem scanner. Results are NEVER public.
  * Cron probes listed x402 endpoints and stores private grades for
- * verified-owner dashboards only. /scan is an explain/CTA page — no numbers.
+ * verified-owner dashboards only. /scan is an explain/CTA page · no numbers.
  */
 import type { Env } from "./types";
 import { checkTool, isBlockedHost } from "./preflight";
@@ -11,7 +11,7 @@ export type ScanGrade = "pass" | "warn" | "fail";
 export type ScanEndpointRecord = {
   /** Normalized absolute URL (private; never expose via public routes). */
   url: string;
-  /** sha256 hex of normalized url — KV key suffix */
+  /** sha256 hex of normalized url · KV key suffix */
   urlHash: string;
   grade: ScanGrade;
   gradedAt: string;

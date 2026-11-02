@@ -1,4 +1,4 @@
-# AGENTS.md — x402check
+# AGENTS.md · x402check
 
 **Preflight before paying any x402 tool.**
 

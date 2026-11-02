@@ -1,6 +1,6 @@
 /**
  * Deep check ($0.05): base preflight plus checks we can really run from a
- * Worker — repeated live probes for payTo/price consistency, recent public
+ * Worker · repeated live probes for payTo/price consistency, recent public
  * Base USDC Transfer logs into the seller payTo, Bazaar + 402 Index listing
  * samples, and drift vs the last KV history for the URL. No OFAC, no wallet
  * simulation, no facilitator-private settlement claims.
@@ -241,12 +241,12 @@ function sleep(ms: number) {
 }
 
 export function watchUpsellHint(): string {
-  return `Optional: POST /watch (or MCP watch_tool) — $${WATCH_PRICE_USD} Exact USDC for ${WATCH_DURATION_DAYS} days of daily re-checks with webhook/email on payTo/price/network change. Same Base USDC rails. Not required for one-shot checks.`;
+  return `Optional: POST /watch (or MCP watch_tool) · $${WATCH_PRICE_USD} Exact USDC for ${WATCH_DURATION_DAYS} days of daily re-checks with webhook/email on payTo/price/network change. Same Base USDC rails. Not required for one-shot checks.`;
 }
 
 export function deepUpsellHint(origin?: string): string {
   const path = origin ? `${origin}/preflight/deep` : "/preflight/deep";
-  return `Want more signal? GET ${path} (or MCP deep_check) runs repeated probes, a recent public Base USDC-to-payTo sample, Bazaar/402 Index listing checks, and drift vs last KV history — $${DEEP_CHECK_PRICE_USD} Exact USDC. Optional.`;
+  return `Want more signal? GET ${path} (or MCP deep_check) runs repeated probes, a recent public Base USDC-to-payTo sample, Bazaar/402 Index listing checks, and drift vs last KV history · $${DEEP_CHECK_PRICE_USD} Exact USDC. Optional.`;
 }
 
 /**
@@ -355,7 +355,7 @@ export async function deepCheck(
       note:
         payToStable && priceStable
           ? "Repeated live probes returned the same payTo and price."
-          : "Repeated live probes disagreed on payTo and/or price — treat as unstable.",
+          : "Repeated live probes disagreed on payTo and/or price · treat as unstable.",
     },
     onChainPayTo: {
       network: "eip155:8453",
@@ -366,7 +366,7 @@ export async function deepCheck(
       transfers: onChain.transfers,
       totalUsdcInWindow: onChain.transfers.reduce((s, t) => s + t.usdc, 0),
       note: base.payTo
-        ? "Public Base USDC Transfer logs with this payTo as recipient over a recent block window. Not a full history and not proof of x402 specifically — any USDC inbound transfer counts."
+        ? "Public Base USDC Transfer logs with this payTo as recipient over a recent block window. Not a full history and not proof of x402 specifically · any USDC inbound transfer counts."
         : "No payTo from the live 402 challenge, so on-chain sample was skipped.",
       error: onChain.error,
     },
@@ -383,7 +383,7 @@ export async function deepCheck(
       note:
         previousPayTo || previousPriceUsd != null
           ? "Compared to the last stored check for this URL in KV history (before this deep run's probes)."
-          : "No prior KV history for this URL — first deep sighting.",
+          : "No prior KV history for this URL · first deep sighting.",
     },
   };
 }

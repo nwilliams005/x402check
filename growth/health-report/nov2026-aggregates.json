@@ -1,0 +1,28 @@
+{
+  "asOf": "2026-11-02T21:00:00-06:00",
+  "timezone": "America/Chicago",
+  "methodology": "Manual listing vs live 402 probes used for owner outreach on 2026-11-02. Not a full-catalog scan. Private scan:ep KV was empty at probe time; numbers below are from that outreach set only.",
+  "listingsChecked": 10,
+  "sources": [
+    "bazaar",
+    "402index"
+  ],
+  "counts": {
+    "priceMismatch": 5,
+    "stalePayTo": 3,
+    "gone404or410": 3,
+    "dynamicVsSnapshot": 1,
+    "authMismatch": 1,
+    "note": "A single endpoint can contribute to more than one bucket; buckets are not a partition. listingsChecked=10 is the outreach contact set, not total URLs glanced at."
+  },
+  "percentOfOutreachSet": {
+    "priceMismatch": 50.0,
+    "stalePayTo": 30.0,
+    "gone404or410": 30.0
+  },
+  "excludes": [
+    "endpoint URLs",
+    "owner names",
+    "payTo full addresses in public copy"
+  ]
+}

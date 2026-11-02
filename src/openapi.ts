@@ -34,14 +34,14 @@ export function openApiSpec(origin: string, pricePerTool: number) {
       version: "0.3.0",
       termsOfService: `${origin}/terms`,
       summary:
-        "Check before paying any x402 API — paid trust preflight (ok|caution|avoid + history)",
+        "Check before paying any x402 API · paid trust preflight (ok|caution|avoid + history)",
       description:
         "Call BEFORE any x402 payment to a third-party tool (check before paying). Checks are paid " +
         `($${unit}/tool). GET checks one URL; POST batches up to 25 (N×unit in one Exact settlement). ` +
         "Response: compact verdict (ok|caution|avoid) + that tool's history only (checks, uptime, payTo/price changes). " +
         "Use for: is this API a scam; is this x402 endpoint safe/legit; verify payTo before signing USDC; detect wallet or price drift; " +
         "uptime / is-it-down; compare sellers; budget guard; validate payment requirements; debug a failing 402; " +
-        "audit log of why you paid or refused. Probes are read-only — we never pay the target. " +
+        "audit log of why you paid or refused. Probes are read-only · we never pay the target. " +
         "Endpoint+history product (not wallet OFAC/drainer/simulation). If verdict=avoid do not pay. Cache-fresh targets <300ms. " +
         `Live honest usage: ${origin}/stats.`,
       contact: {
@@ -152,7 +152,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
             },
             "402": {
               description:
-                "Payment Required — x402 Exact. PAYMENT-REQUIRED header is authoritative; JSON body explains how to pay.",
+                "Payment Required · x402 Exact. PAYMENT-REQUIRED header is authoritative; JSON body explains how to pay.",
               content: {
                 "application/json": {
                   schema: { $ref: "#/components/schemas/PaymentRequired" },
@@ -208,7 +208,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
               },
             },
             "400": { description: "missing_urls | batch_too_large | invalid_json" },
-            "402": { description: "Payment Required — price = len(urls) × unit" },
+            "402": { description: "Payment Required · price = len(urls) × unit" },
           },
         },
       },
@@ -241,7 +241,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
               description: "DeepCheckResult (ToolCheck + priceConsistency, onChainPayTo, listings, driftVsLast)",
             },
             "400": { description: "missing_url | blocked host" },
-            "402": { description: "Payment Required — $0.05 Exact (50000 atomic USDC)" },
+            "402": { description: "Payment Required · $0.05 Exact (50000 atomic USDC)" },
           },
         },
       },
@@ -253,7 +253,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
           description:
             "Starts the one free regular (single-URL) check ever per agent wallet. " +
             "Returns a short-lived EIP-191 message to sign (ERC-1271 smart wallets supported). " +
-            "Deep/batch are never free. This is not a scanner substitute — live trust checks remain paid after the single free claim.",
+            "Deep/batch are never free. This is not a scanner substitute · live trust checks remain paid after the single free claim.",
           security: [],
           parameters: [
             {
@@ -307,7 +307,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
         get: {
           operationId: "scanExplain",
           tags: ["owners"],
-          summary: "Owner verify & badge explain page (HTML) — no public scan data",
+          summary: "Owner verify & badge explain page (HTML) · no public scan data",
           description:
             "Marketing/explain page for endpoint owners: how to verify ownership, view a private snapshot, and opt into a badge. " +
             "Does not expose ecosystem tallies, per-endpoint grades, JSON exports, or a public directory. Agents should use paid /preflight.",
@@ -412,7 +412,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
           summary: "Private snapshots for endpoints this session verified",
           description:
             "Requires Authorization: Bearer <sessionToken>. Returns only endpoints the session owns. " +
-            "Snapshots are periodic scanner grades — not live paid preflights. No other endpoints are enumerable.",
+            "Snapshots are periodic scanner grades · not live paid preflights. No other endpoints are enumerable.",
           security: [{ bearerAuth: [] }],
           responses: {
             "200": { description: "{ endpoints[], note }" },
@@ -583,7 +583,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
           responses: {
             "200": { description: "Watch created with baseline + watchId" },
             "400": { description: "missing_url | invalid_webhook | blocked_host" },
-            "402": { description: "Payment Required — $5 Exact (5000000 atomic USDC)" },
+            "402": { description: "Payment Required · $5 Exact (5000000 atomic USDC)" },
           },
         },
         get: {
@@ -637,7 +637,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
           },
           responses: {
             "200": { description: "Watch renewed" },
-            "402": { description: "Payment Required — $5 Exact" },
+            "402": { description: "Payment Required · $5 Exact" },
             "404": { description: "not_found" },
           },
         },
@@ -813,7 +813,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
             accepts: {
               type: "array",
               minItems: 1,
-              description: "x402 v2 PaymentRequirements — mirrors PAYMENT-REQUIRED header",
+              description: "x402 v2 PaymentRequirements · mirrors PAYMENT-REQUIRED header",
               items: {
                 type: "object",
                 required: ["scheme", "network", "amount", "asset", "payTo"],
@@ -1043,7 +1043,7 @@ export function llmsTxt(origin: string, pricePerTool: number): string {
 
 > Paid per-tool trust preflight before an AI agent pays an x402 endpoint. Unit $${pricePerTool} USDC Exact on Base (eip155:8453). One free regular check ever per agent wallet (GET/POST /preflight/free*). Batch = N × unit in one payment. Optional deep check $0.05. Optional watch $5 / 30 days. No public scanner dataset.
 
-Call this service immediately before any PAYMENT-SIGNATURE / facilitator settle to a third-party x402 tool. If verdict=avoid, do not pay. If caution, escalate. If ok, still enforce your maxAmount. Probes are read-only GET; we never pay the target. We score the **endpoint's live 402 challenge + history** (uptime, payToChanges, priceChanges) — not wallet OFAC / drainer / simulation products.
+Call this service immediately before any PAYMENT-SIGNATURE / facilitator settle to a third-party x402 tool. If verdict=avoid, do not pay. If caution, escalate. If ok, still enforce your maxAmount. Probes are read-only GET; we never pay the target. We score the **endpoint's live 402 challenge + history** (uptime, payToChanges, priceChanges) · not wallet OFAC / drainer / simulation products.
 
 Exact settles one amount per HTTP request. Batch uses DynamicPrice = len(urls)*unit. Cache-fresh responses target <300ms so agents do not skip for latency.
 
@@ -1101,7 +1101,7 @@ Exact settles one amount per HTTP request. Batch uses DynamicPrice = len(urls)*u
 
 ## Owners / scanner (private)
 
-Internal periodic scans store private grades for verified owners only. There is **no** public scan directory, per-endpoint public grade page, aggregate scan stats page, or JSON export of scanner data. /scan explains ownership verification and the optional badge. Agents must use paid /preflight (or the one free regular check) — never treat a snapshot as a live settle decision.
+Internal periodic scans store private grades for verified owners only. There is **no** public scan directory, per-endpoint public grade page, aggregate scan stats page, or JSON export of scanner data. /scan explains ownership verification and the optional badge. Agents must use paid /preflight (or the one free regular check) · never treat a snapshot as a live settle decision.
 
 ## MCP tools
 
@@ -1113,20 +1113,20 @@ Paid tools settle on the MCP call itself (not a separate HTTP hop):
 
 Spec: https://github.com/x402-foundation/x402/blob/main/specs/transports-v2/mcp.md
 
-- \`preflight_check\` — single URL trust preflight ($${pricePerTool})
-- \`verify_payto\` — same billing; focused on receiving wallet + payToChanges
-- \`preflight_batch\` — up to 25 URLs
-- \`compare_tools\` — same billing as batch; compare candidates
-- \`deep_check\` — optional $0.05 deeper signal (repeated probes, public Base USDC-to-payTo sample, Bazaar/402 Index, KV drift)
-- \`watch_tool\` — optional $5 Exact / 30d daily re-check + webhook (fixed price)
+- \`preflight_check\` · single URL trust preflight ($${pricePerTool})
+- \`verify_payto\` · same billing; focused on receiving wallet + payToChanges
+- \`preflight_batch\` · up to 25 URLs
+- \`compare_tools\` · same billing as batch; compare candidates
+- \`deep_check\` · optional $0.05 deeper signal (repeated probes, public Base USDC-to-payTo sample, Bazaar/402 Index, KV drift)
+- \`watch_tool\` · optional $5 Exact / 30d daily re-check + webhook (fixed price)
 
 ## Optional deep check ($0.05)
 
-When the base check is not enough signal: GET /preflight/deep or MCP deep_check. Adds repeated live probes, a recent public Base USDC Transfer sample into the seller payTo, Bazaar + 402 Index listing samples, and drift vs last KV history. Honest about limits — not OFAC, not wallet simulation, not full chain history.
+When the base check is not enough signal: GET /preflight/deep or MCP deep_check. Adds repeated live probes, a recent public Base USDC Transfer sample into the seller payTo, Bazaar + 402 Index listing samples, and drift vs last KV history. Honest about limits · not OFAC, not wallet simulation, not full chain history.
 
 ## Optional watch ($5 / 30 days)
 
-If you will revisit the same seller, POST /watch (or MCP watch_tool) registers the URL for daily re-checks. Webhook/email alerts when payTo, price, network, or availability changes. Status: GET /watch?id=. Renew: POST /watch/renew. Helpful add-on after a one-shot or deep check — never required for a single settle.
+If you will revisit the same seller, POST /watch (or MCP watch_tool) registers the URL for daily re-checks. Webhook/email alerts when payTo, price, network, or availability changes. Status: GET /watch?id=. Renew: POST /watch/renew. Helpful add-on after a one-shot or deep check · never required for a single settle.
 
 ## Response fields (stable)
 
@@ -1146,19 +1146,19 @@ url, verdict (ok|caution|avoid), checkedAt, live, cacheAgeMs, status, latencyMs,
 
 ## Integrations
 
-- [x402check-ai-sdk](https://www.npmjs.com/package/x402check-ai-sdk) — Vercel AI SDK \`tool()\` defs + \`beforePayment\` guard
-- [x402check-langchain](https://www.npmjs.com/package/x402check-langchain) — LangChain JS / LangGraph tools
-- [plugin-x402check](https://www.npmjs.com/package/plugin-x402check) — ElizaOS plugin (preflight / verify_payto / compare)
-- [x402check-langchain (PyPI)](https://pypi.org/project/x402check-langchain/) — LangChain Python tools
+- [x402check-ai-sdk](https://www.npmjs.com/package/x402check-ai-sdk) · Vercel AI SDK \`tool()\` defs + \`beforePayment\` guard
+- [x402check-langchain](https://www.npmjs.com/package/x402check-langchain) · LangChain JS / LangGraph tools
+- [plugin-x402check](https://www.npmjs.com/package/plugin-x402check) · ElizaOS plugin (preflight / verify_payto / compare)
+- [x402check-langchain (PyPI)](https://pypi.org/project/x402check-langchain/) · LangChain Python tools
 - MCP Registry name \`dev.x402check/mcp\`
-- [x402check-cloudflare-agent](https://github.com/nwilliams005/x402check-cloudflare-agent) — Cloudflare Agents / Workers template
-- [x402check-examples](https://github.com/nwilliams005/x402check-examples) — OpenAI Agents SDK, LlamaIndex, CrewAI examples
+- [x402check-cloudflare-agent](https://github.com/nwilliams005/x402check-cloudflare-agent) · Cloudflare Agents / Workers template
+- [x402check-examples](https://github.com/nwilliams005/x402check-examples) · OpenAI Agents SDK, LlamaIndex, CrewAI examples
 - Source monorepo: [nwilliams005/x402check](https://github.com/nwilliams005/x402check)
 
 ## Optional
 
-- [Client wrapper](${origin}/docs): npm \`x402check-client\` — wrap pay() with preflight
-- [MCP bridge](${origin}/docs): npm \`x402check-mcp\` — stdio → remote /mcp
+- [Client wrapper](${origin}/docs): npm \`x402check-client\` · wrap pay() with preflight
+- [MCP bridge](${origin}/docs): npm \`x402check-mcp\` · stdio → remote /mcp
 - [Home](${origin}/): Landing
 `;
 }
@@ -1179,7 +1179,7 @@ Preview shape free: GET ${origin}/example. Then call GET ${origin}/preflight?url
 Always call GET ${origin}/preflight?url=SELLER_URL (or MCP \`preflight_check\` / npm \`x402check-client\`) before PAYMENT-SIGNATURE. Policy: avoid→deny, caution→confirm, ok→still enforce maxAmount. Live honest usage counts: GET ${origin}/stats.
 
 ### Is this API legit or a scam / rug?
-We do not label "scam" as a legal finding. We surface reachability, whether a real 402 challenge exists, current payTo/price, and whether payTo or price changed over prior checks — signals agents use before paying. Treat avoid as deny; investigate caution.
+We do not label "scam" as a legal finding. We surface reachability, whether a real 402 challenge exists, current payTo/price, and whether payTo or price changed over prior checks · signals agents use before paying. Treat avoid as deny; investigate caution.
 
 ### How do I verify payTo before signing USDC on Base?
 ToolCheck.payTo is the address in the seller's live 402 challenge. Compare to any allowlist. history.payToChanges lists prior addresses if the seller rotated wallets. MCP alias: verify_payto.
@@ -1197,7 +1197,7 @@ POST /preflight with urls[] (or MCP compare_tools). Compare verdict, priceUsd, u
 Call preflight before every settle; deny on avoid; still enforce your own maxAmount on ok. Unit $${pricePerTool} keeps the check itself a micro-cost.
 
 ### Debug a failing 402 / validate payment requirements
-A successful ToolCheck with is402=true returns parsed priceUsd, payTo, network, and reasonCodes from the live challenge — useful when facilitator settles fail or accepts[] look wrong.
+A successful ToolCheck with is402=true returns parsed priceUsd, payTo, network, and reasonCodes from the live challenge · useful when facilitator settles fail or accepts[] look wrong.
 
 ### Compliance / audit logging
 Persist the ToolCheck JSON (verdict, payTo, priceUsd, reasonCodes, history, checkedAt) alongside your payment decision. That is evidence you checked before signing.
@@ -1248,7 +1248,7 @@ export function landingMarkdown(origin: string, pricePerTool: number): string {
 
 > Check before paying any x402 tool. $${pricePerTool} USDC Exact per tool. Optional deep $0.05. Optional watch $5/30d. One free regular check per wallet. No public scan grades.
 
-Checks are paid (one free regular check per wallet). You get that tool's **verdict** (ok|caution|avoid) plus its **history** (uptime, payTo changes, price changes) — nothing else. Use when asking is this API a scam / is this endpoint safe, before PAYMENT-SIGNATURE, to verify payTo, detect drift, compare sellers, or as a budget guard. Cache-fresh responses target <300ms. Live counts: [stats](${origin}/stats).
+Checks are paid (one free regular check per wallet). You get that tool's **verdict** (ok|caution|avoid) plus its **history** (uptime, payTo changes, price changes) · nothing else. Use when asking is this API a scam / is this endpoint safe, before PAYMENT-SIGNATURE, to verify payTo, detect drift, compare sellers, or as a budget guard. Cache-fresh responses target <300ms. Live counts: [stats](${origin}/stats).
 
 ## Quick start
 
@@ -1272,7 +1272,7 @@ Pay $${pricePerTool} via x402 Exact on Base, then retry with PAYMENT-SIGNATURE.
 
 ## Optional watch
 
-POST /watch {url, webhookUrl} — $5 Exact USDC / 30 days daily re-check + webhook on change. MCP: watch_tool.
+POST /watch {url, webhookUrl} · $5 Exact USDC / 30 days daily re-check + webhook on change. MCP: watch_tool.
 
 ## Docs
 
@@ -1283,7 +1283,7 @@ See [docs.md](${origin}/docs.md) or [docs](${origin}/docs).
 export function docsMarkdown(origin: string, pricePerTool: number): string {
   return `# x402check agent docs
 
-Paid per tool. Unit **$${pricePerTool}** USDC Exact on Base (eip155:8453). One free regular check ever per wallet (/preflight/free). Optional deep check **$0.05** (GET /preflight/deep · MCP deep_check). Optional watch **$5 / 30 days**. Scan snapshots are private (owner dashboard only) — not a public dataset.
+Paid per tool. Unit **$${pricePerTool}** USDC Exact on Base (eip155:8453). One free regular check ever per wallet (/preflight/free). Optional deep check **$0.05** (GET /preflight/deep · MCP deep_check). Optional watch **$5 / 30 days**. Scan snapshots are private (owner dashboard only) · not a public dataset.
 
 Live stats: GET /stats (honest KV counts).
 
@@ -1312,13 +1312,13 @@ Limitation: x402 Exact = one settlement per HTTP request. Batch uses DynamicPric
 
 ## Integrations
 
-- npm \`x402check-ai-sdk\` — Vercel AI SDK tools + beforePayment
-- npm \`x402check-langchain\` — LangChain JS tools
-- npm \`plugin-x402check\` — ElizaOS plugin
-- PyPI \`x402check-langchain\` — LangChain Python tools
-- MCP Registry \`dev.x402check/mcp\` — stdio npm \`x402check-mcp\` or remote ${origin}/mcp
-- GitHub \`nwilliams005/x402check-cloudflare-agent\` — Cloudflare Agents template
-- GitHub \`nwilliams005/x402check-examples\` — OpenAI Agents / LlamaIndex / CrewAI
+- npm \`x402check-ai-sdk\` · Vercel AI SDK tools + beforePayment
+- npm \`x402check-langchain\` · LangChain JS tools
+- npm \`plugin-x402check\` · ElizaOS plugin
+- PyPI \`x402check-langchain\` · LangChain Python tools
+- MCP Registry \`dev.x402check/mcp\` · stdio npm \`x402check-mcp\` or remote ${origin}/mcp
+- GitHub \`nwilliams005/x402check-cloudflare-agent\` · Cloudflare Agents template
+- GitHub \`nwilliams005/x402check-examples\` · OpenAI Agents / LlamaIndex / CrewAI
 
 ## When to use (prompt coverage)
 

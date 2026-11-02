@@ -1,0 +1,27 @@
+{
+  "asOf": "2026-11-02T21:12:04.841Z",
+  "listingsChecked": 10,
+  "grades": {
+    "pass": 0,
+    "warn": 3,
+    "fail": 7
+  },
+  "counts": {
+    "priceMismatch": 6,
+    "stalePayTo": 2,
+    "gone404or410": 3,
+    "unreachable": 0,
+    "not402": 4
+  },
+  "percentOfChecked": {
+    "priceMismatch": 60,
+    "stalePayTo": 20,
+    "gone404or410": 30,
+    "unreachable": 0,
+    "not402": 40,
+    "fail": 70,
+    "warn": 30,
+    "pass": 0
+  },
+  "privacy": "Aggregate only. No URLs, owners, or payTo addresses are included."
+}

@@ -317,14 +317,14 @@ export function mcpServerCardLegacy(origin: string, pricePerTool: number) {
   };
 }
 
-/** SEP-2127 MCP Server Card (no tools list — clients use tools/list at runtime). */
+/** SEP-2127 MCP Server Card (no tools list · clients use tools/list at runtime). */
 export function mcpServerCardSep(origin: string, pricePerTool: number) {
   return {
     $schema: "https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json",
     name: "dev.x402check/mcp",
     title: "x402check",
     description:
-      `Check before paying x402 seller URLs ($${pricePerTool}/tool). Answers is-this-API-a-scam / is-this-endpoint-safe. Returns ok|caution|avoid + history (uptime, payTo/price changes). Use before PAYMENT-SIGNATURE; verify payTo; compare tools; budget guard; optional watch_tool. Endpoint+history check — not wallet OFAC/simulation.`,
+      `Check before paying x402 seller URLs ($${pricePerTool}/tool). Answers is-this-API-a-scam / is-this-endpoint-safe. Returns ok|caution|avoid + history (uptime, payTo/price changes). Use before PAYMENT-SIGNATURE; verify payTo; compare tools; budget guard; optional watch_tool. Endpoint+history check · not wallet OFAC/simulation.`,
     version: "0.3.0",
     icons: [{ src: `${origin}/assets/icon.svg`, mimeType: "image/svg+xml", sizes: ["any"] }],
     remotes: [
@@ -343,7 +343,7 @@ export function aiCatalog(origin: string) {
     specVersion: "1.0",
     name: "x402check",
     description:
-      "AI artifacts for x402check — check before paying any x402 endpoint; is this API a scam/safe; verify payTo, uptime, price drift, compare sellers.",
+      "AI artifacts for x402check · check before paying any x402 endpoint; is this API a scam/safe; verify payTo, uptime, price drift, compare sellers.",
     entries: [
       {
         identifier: "urn:air:x402check.dev:mcp:x402check",
@@ -360,7 +360,7 @@ export function aiCatalog(origin: string) {
 }
 
 export function robotsTxt(origin: string): string {
-  return `# x402check — allow search + AI crawlers; discovery docs are public
+  return `# x402check · allow search + AI crawlers; discovery docs are public
 User-agent: *
 Allow: /
 Sitemap: ${origin}/sitemap.xml
@@ -406,6 +406,15 @@ export function sitemapXml(origin: string, lastmod: string): string {
   const urls = [
     "/",
     "/docs",
+    "/blog",
+    "/blog/how-to-check-x402-before-paying",
+    "/blog/five-x402-listing-mistakes",
+    "/blog/x402check-github-action-ci",
+    "/blog/auto-preflight-with-wrapfetch",
+    "/blog/how-to-check-x402-before-paying.md",
+    "/blog/five-x402-listing-mistakes.md",
+    "/blog/x402check-github-action-ci.md",
+    "/blog/auto-preflight-with-wrapfetch.md",
     "/scan",
     "/owner",
     "/terms",
@@ -437,7 +446,7 @@ export function sitemapXml(origin: string, lastmod: string): string {
     <loc>${origin}${path}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
-    <priority>${path === "/" ? "1.0" : path === "/docs" || path === "/llms.txt" ? "0.9" : "0.7"}</priority>
+    <priority>${path === "/" ? "1.0" : path === "/docs" || path === "/blog" || path === "/llms.txt" ? "0.9" : "0.7"}</priority>
   </url>`,
     )
     .join("\n");
@@ -453,7 +462,7 @@ export function exampleToolCheck(origin: string, pricePerTool: number) {
   return {
     sample: true,
     note:
-      "Static example only — not a live probe and not billable. Call GET /preflight?url=… with an x402 v2 PAYMENT-SIGNATURE to run a real check.",
+      "Static example only · not a live probe and not billable. Call GET /preflight?url=… with an x402 v2 PAYMENT-SIGNATURE to run a real check.",
     pricePerToolUsd: pricePerTool,
     paidEndpoint: `${origin}/preflight`,
     docs: `${origin}/docs`,
@@ -534,12 +543,12 @@ export function paymentRequiredBody(
       paymentHeaderIn: "PAYMENT-SIGNATURE",
       challengeHeaderOut: "PAYMENT-REQUIRED",
       legacyNote:
-        "x402 v1 clients that only register ExactEvmClientV1 / network \"base\" fail here with \"No client registered for x402 version: 2\". Register ExactEvmScheme for eip155:* (or eip155:8453). Do not send X-PAYMENT alone — this server reads PAYMENT-SIGNATURE.",
+        "x402 v1 clients that only register ExactEvmClientV1 / network \"base\" fail here with \"No client registered for x402 version: 2\". Register ExactEvmScheme for eip155:* (or eip155:8453). Do not send X-PAYMENT alone · this server reads PAYMENT-SIGNATURE.",
       steps: [
         "Decode the PAYMENT-REQUIRED response header (base64 JSON, x402Version:2) or use body.accepts[].",
         `Build a PAYMENT-SIGNATURE covering accepts[0] (amount is atomic USDC; $${pricePerTool} = \"${atomic}\").`,
         "Retry the same request with header PAYMENT-SIGNATURE (not X-PAYMENT alone).",
-        "Recommended: npm i @x402/fetch @x402/evm — wrapFetchWithPayment + ExactEvmScheme on eip155:*.",
+        "Recommended: npm i @x402/fetch @x402/evm · wrapFetchWithPayment + ExactEvmScheme on eip155:*.",
         "MCP: tools/list is free; unpaid tools/call returns PaymentRequired (accepts[]); retry with params._meta[\"x402/payment\"] (same Exact USDC on Base as HTTP).",
         `Preview a sample JSON shape for free at GET ${origin}/example (static, not a live check).`,
       ],
@@ -567,7 +576,7 @@ export function paymentRequiredBody(
 
 /** Always-on agent instructions (AGENTS.md convention). */
 export function agentsMarkdown(origin: string, pricePerTool: number): string {
-  return `# AGENTS.md — x402check
+  return `# AGENTS.md · x402check
 
 Instructions for AI coding agents and tool-using agents that pay x402 endpoints.
 
@@ -592,7 +601,7 @@ Instructions for AI coding agents and tool-using agents that pay x402 endpoints.
 - **1 free regular check ever per agent wallet** via \`/preflight/free*\`
 - Then **$${pricePerTool}** Exact USDC on Base (\`eip155:8453\`) per URL
 - Optional deep check **$0.05**; optional watch **$5 / 30 days**
-- Owner \`/scan\` snapshots are private — not a public substitute for paid checks
+- Owner \`/scan\` snapshots are private · not a public substitute for paid checks
 
 ## Honest scope
 
@@ -692,7 +701,7 @@ Paid to x402check (not the seller): **1 free regular check ever per wallet**, th
 
 ## Notes
 
-- Visible, honest product — no hidden prompt injection.
+- Visible, honest product · no hidden prompt injection.
 - Checks live 402 + history only (not wallet OFAC/simulation).
 - Docs: ${origin}/AGENTS.md · ${origin}/llms.txt · ${origin}/openapi.json
 `;

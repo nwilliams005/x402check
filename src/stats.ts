@@ -176,7 +176,7 @@ export type RecordCheckOpts = {
 
 /**
  * Increment aggregate counters after a completed check response.
- * RMW on KV — approximate under concurrency; never pads numbers.
+ * RMW on KV · approximate under concurrency; never pads numbers.
  */
 export async function recordCheckStats(
   kv: KVNamespace | undefined,

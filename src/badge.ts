@@ -52,7 +52,7 @@ export async function optInBadge(
   }
   if (!ownership) {
     await padTiming(t0);
-    // Same generic error whether URL unknown or not owned — no leak
+    // Same generic error whether URL unknown or not owned · no leak
     return { ok: false, error: "not_found", status: 404 };
   }
   if (!session.endpoints.includes(urlHash!)) {
@@ -122,7 +122,7 @@ export async function revokeBadge(
   return { ok: true };
 }
 
-/** Hand-crafted minimal SVG — no AI-slop art. */
+/** Hand-crafted minimal SVG · no AI-slop art. */
 export function badgeSvg(opts: {
   gradeLabel: string;
   dateLabel: string;

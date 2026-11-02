@@ -1,0 +1,133 @@
+{
+  "records": [
+    {
+      "grade": "fail",
+      "reasons": [
+        "price_mismatch",
+        "uptime_ok"
+      ],
+      "status": 402,
+      "live": true,
+      "is402": true,
+      "listedPriceUsd": 0.005,
+      "livePriceUsd": 2.0,
+      "source": "bazaar"
+    },
+    {
+      "grade": "fail",
+      "reasons": [
+        "payto_mismatch",
+        "price_match",
+        "uptime_ok"
+      ],
+      "status": 402,
+      "live": true,
+      "is402": true,
+      "listedPriceUsd": 0.05,
+      "livePriceUsd": 0.05,
+      "source": "bazaar"
+    },
+    {
+      "grade": "fail",
+      "reasons": [
+        "payto_mismatch",
+        "price_mismatch",
+        "uptime_ok"
+      ],
+      "status": 402,
+      "live": true,
+      "is402": true,
+      "listedPriceUsd": 0.02,
+      "livePriceUsd": 0.005,
+      "source": "bazaar"
+    },
+    {
+      "grade": "warn",
+      "reasons": [
+        "price_mismatch",
+        "uptime_ok"
+      ],
+      "status": 402,
+      "live": true,
+      "is402": true,
+      "listedPriceUsd": 0.001,
+      "livePriceUsd": 0.005,
+      "source": "402index"
+    },
+    {
+      "grade": "warn",
+      "reasons": [
+        "price_mismatch",
+        "uptime_ok"
+      ],
+      "status": 402,
+      "live": true,
+      "is402": true,
+      "listedPriceUsd": 0.01,
+      "livePriceUsd": 0.05,
+      "source": "bazaar"
+    },
+    {
+      "grade": "fail",
+      "reasons": [
+        "not_402"
+      ],
+      "status": 404,
+      "live": true,
+      "is402": false,
+      "listedPriceUsd": 0.01,
+      "livePriceUsd": null,
+      "source": "402index"
+    },
+    {
+      "grade": "fail",
+      "reasons": [
+        "not_402"
+      ],
+      "status": 410,
+      "live": true,
+      "is402": false,
+      "listedPriceUsd": 0.01,
+      "livePriceUsd": null,
+      "source": "402index"
+    },
+    {
+      "grade": "fail",
+      "reasons": [
+        "not_402"
+      ],
+      "status": 404,
+      "live": true,
+      "is402": false,
+      "listedPriceUsd": 0.01,
+      "livePriceUsd": null,
+      "source": "402index"
+    },
+    {
+      "grade": "warn",
+      "reasons": [
+        "price_mismatch",
+        "uptime_ok"
+      ],
+      "status": 402,
+      "live": true,
+      "is402": true,
+      "listedPriceUsd": 0.0025,
+      "livePriceUsd": 0.005,
+      "source": "bazaar"
+    },
+    {
+      "grade": "fail",
+      "reasons": [
+        "not_402",
+        "price_mismatch"
+      ],
+      "status": 401,
+      "live": true,
+      "is402": false,
+      "listedPriceUsd": 1.0,
+      "livePriceUsd": 0.001,
+      "source": "402index"
+    }
+  ]
+}

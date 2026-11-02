@@ -1,5 +1,5 @@
 /**
- * x402 Tool Trust Preflight — paid per-tool checks; one free regular check per wallet.
+ * x402 Tool Trust Preflight · paid per-tool checks; one free regular check per wallet.
  * Production: Base mainnet USDC via CDP (Solana behind ENABLE_SOLANA=false).
  * Dev: wrangler.dev.toml Base Sepolia. Do not deploy without Nicklaus's explicit approval.
  */
@@ -25,6 +25,14 @@ import {
   unitPriceUsd,
 } from "./sell";
 import { docsHtml, landingHtml, styleCss } from "./pages";
+import {
+  BLOG_POSTS,
+  blogIndexHtml,
+  blogIndexMarkdown,
+  blogPostHtml,
+  blogPostMarkdown,
+  getPost,
+} from "./blog";
 import { cookiesHtml, privacyHtml, termsHtml } from "./legal";
 import { scanExplainHtml, ownerDashboardHtml } from "./scan-pages";
 import {
@@ -166,7 +174,7 @@ app.use("/watch/renew", async (c, next) => {
 });
 
 
-/** Free live stats — real counters from our KV (+ optional verified on-chain). Never fabricated. */
+/** Free live stats · real counters from our KV (+ optional verified on-chain). Never fabricated. */
 app.get("/stats", async (c) => {
   const stats = await loadStats(c.env.PAYTO_HISTORY);
   const onChain = stats.onChain ?? null;
@@ -199,7 +207,7 @@ app.get("/stats", async (c) => {
   );
 });
 
-/** Free static sample — never hits sell()/KV; safe for agents that need a shape before paying. */
+/** Free static sample · never hits sell()/KV; safe for agents that need a shape before paying. */
 app.get("/example", (c) => {
   return c.json(exampleToolCheck(originOf(c), unit(c.env)), 200, {
     "Cache-Control": "public, max-age=3600",
@@ -286,6 +294,43 @@ app.get("/docs.md", (c) =>
     "Cache-Control": "public, max-age=300",
   }),
 );
+
+app.get("/blog", (c) => {
+  const origin = originOf(c);
+  return c.html(blogIndexHtml(origin), 200, {
+    Link: `<${origin}/blog.md>; rel="alternate"; type="text/markdown"`,
+    "Cache-Control": "public, max-age=300",
+  });
+});
+
+app.get("/blog.md", (c) =>
+  c.text(blogIndexMarkdown(), 200, {
+    "Content-Type": "text/markdown; charset=utf-8",
+    "Cache-Control": "public, max-age=300",
+  }),
+);
+
+app.get("/blog/:slug", (c) => {
+  const slug = c.req.param("slug");
+  if (slug.endsWith(".md")) {
+    const post = getPost(slug.slice(0, -3));
+    if (!post) return c.text("Not found", 404);
+    return c.text(blogPostMarkdown(post), 200, {
+      "Content-Type": "text/markdown; charset=utf-8",
+      "Cache-Control": "public, max-age=300",
+    });
+  }
+  const post = getPost(slug);
+  if (!post) return c.text("Not found", 404);
+  const origin = originOf(c);
+  return c.html(blogPostHtml(origin, post), 200, {
+    Link: `<${origin}/blog/${post.slug}.md>; rel="alternate"; type="text/markdown"`,
+    "Cache-Control": "public, max-age=300",
+  });
+});
+
+// Keep BLOG_POSTS referenced so tree-shaking keeps content module side effects clear in workers.
+void BLOG_POSTS;
 
 app.get("/llms.txt", (c) =>
   c.text(llmsTxt(originOf(c), unit(c.env)), 200, {
@@ -460,12 +505,12 @@ function paymentRoutes(env: Env, origin: string) {
     history: { checks: 3, uptimePct: 100, payToChanges: [], priceChanges: [] },
   };
 
-  // Separate GET vs POST bazaar declarations (do NOT set discoverable:true — invalid).
+  // Separate GET vs POST bazaar declarations (do NOT set discoverable:true · invalid).
   // https://github.com/x402-foundation/x402/blob/main/specs/extensions/bazaar.md
   return {
     "GET /preflight": {
       description:
-        `Check before paying any x402 tool: is this API a scam/safe? Trust-check one seller URL (live 402 + history). Use for verify-payTo, uptime, price/wallet drift, budget guard, validate 402, debug failing settle. Returns ok|caution|avoid + that tool's history only. $${u}/URL. One free regular check per wallet via /preflight/free. Endpoint+history — not wallet OFAC/simulation. Optional deeper signal: GET /preflight/deep ($${DEEP_CHECK_PRICE_USD}).`,
+        `Check before paying any x402 tool: is this API a scam/safe? Trust-check one seller URL (live 402 + history). Use for verify-payTo, uptime, price/wallet drift, budget guard, validate 402, debug failing settle. Returns ok|caution|avoid + that tool's history only. $${u}/URL. One free regular check per wallet via /preflight/free. Endpoint+history · not wallet OFAC/simulation. Optional deeper signal: GET /preflight/deep ($${DEEP_CHECK_PRICE_USD}).`,
       mimeType: "application/json",
       serviceName,
       tags,
@@ -781,7 +826,7 @@ async function withPayment(
 }
 
 app.use("/preflight", async (c, next) => {
-  // Exact /preflight only — deep has its own middleware
+  // Exact /preflight only · deep has its own middleware
   if (new URL(c.req.url).pathname !== "/preflight") return next();
   return withPayment(c, next, (k) => k === "GET /preflight" || k === "POST /preflight");
 });
@@ -836,7 +881,7 @@ app.use("/watch/renew", async (c, next) => {
 
 app.use("/watch", async (c, next) => {
   if (c.req.method !== "POST") return next();
-  // Exact /watch only — renew has its own middleware above
+  // Exact /watch only · renew has its own middleware above
   if (new URL(c.req.url).pathname !== "/watch") return next();
   return withPayment(c, next, (k) => k === "POST /watch");
 });
@@ -1055,7 +1100,7 @@ app.post("/watch/renew", async (c) => {
 });
 
 
-/** Public explain page — no scan numbers, no per-endpoint data. */
+/** Public explain page · no scan numbers, no per-endpoint data. */
 app.get("/scan", (c) =>
   c.html(scanExplainHtml(originOf(c), unit(c.env)), 200, {
     "Cache-Control": "public, max-age=300",
@@ -1068,7 +1113,7 @@ app.get("/owner", (c) =>
   }),
 );
 
-/** One free regular check ever per wallet — challenge. */
+/** One free regular check ever per wallet · challenge. */
 app.get("/preflight/free/challenge", async (c) => {
   const address = c.req.query("address") || "";
   const issued = await issueFreeChallenge(c.env, {
@@ -1093,7 +1138,7 @@ app.get("/preflight/free/challenge", async (c) => {
   return c.json({
     ...issued.challenge,
     how:
-      "Sign challenge.message with the wallet (EIP-191 personal_sign; ERC-1271 ok). Then POST /preflight/free with {url, address, nonce, signature}. One free regular check ever per wallet — not deep/batch.",
+      "Sign challenge.message with the wallet (EIP-191 personal_sign; ERC-1271 ok). Then POST /preflight/free with {url, address, nonce, signature}. One free regular check ever per wallet · not deep/batch.",
   });
 });
 
@@ -1219,7 +1264,7 @@ app.get("/owner/dashboard", async (c) => {
     ...ep,
     upsells: {
       ...ep.upsells,
-      paidCheck: `GET ${originOf(c)}/preflight?url=… — $${u} live check (not a snapshot).`,
+      paidCheck: `GET ${originOf(c)}/preflight?url=… · $${u} live check (not a snapshot).`,
     },
   }));
   return c.json(
@@ -1270,7 +1315,7 @@ app.delete("/owner/badge", async (c) => {
   return c.json({ ok: true, revoked: true });
 });
 
-/** Public badge image — unguessable id; empty 404 otherwise. */
+/** Public badge image · unguessable id; empty 404 otherwise. */
 app.get("/badge/:id", async (c) => {
   const id = c.req.param("id") || "";
   const rendered = await renderPublicBadge(c.env, {

@@ -1,0 +1,11 @@
+{
+  "name": "x402check",
+  "version": "0.1.6",
+  "description": "Preflight x402 seller URLs before your agent pays (ok, caution, or avoid plus history).",
+  "mcpServers": {
+    "x402check": {
+      "command": "npx",
+      "args": ["-y", "x402check-mcp"]
+    }
+  }
+}

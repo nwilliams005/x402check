@@ -12,7 +12,7 @@ export function scanExplainHtml(origin: string, pricePerTool: number): string {
 <head>
 ${headTagsFragment({
   origin,
-  title: "Owner verify & badge — x402check",
+  title: "Owner verify & badge · x402check",
   description,
   path: "/scan",
   omitMarkdown: true,
@@ -52,7 +52,7 @@ ${headTagsFragment({
       <li>Start a challenge for your endpoint URL.</li>
       <li><strong>Primary:</strong> sign the challenge with the endpoint’s <code>payTo</code> wallet (EIP-191 personal_sign; ERC-1271 smart wallets supported).</li>
       <li><strong>Fallback:</strong> publish a short-lived token as a DNS TXT <code>x402check-verify=…</code> or at <code>/.well-known/x402check-verify.txt</code> on your domain.</li>
-      <li>Your session can read snapshots for endpoints you verified — nothing else.</li>
+      <li>Your session can read snapshots for endpoints you verified · nothing else.</li>
     </ol>
 
     <div class="panel">
@@ -85,7 +85,7 @@ DELETE /owner/badge     {"url":"…"}   // revoke
 GET  /badge/&lt;id&gt;.svg    // public image if active + pass</pre>
 
     <p class="fine">
-      Agents: skip this page — use <a href="/docs">paid preflight</a>,
+      Agents: skip this page · use <a href="/docs">paid preflight</a>,
       <a href="/llms.txt">llms.txt</a>, or <a href="/openapi.json">OpenAPI</a>.
       One free regular check per wallet is documented there (not a scan substitute).
     </p>
@@ -103,7 +103,7 @@ export function ownerDashboardHtml(origin: string, pricePerTool: number): string
 <head>
 ${headTagsFragment({
   origin,
-  title: "Owner dashboard — x402check",
+  title: "Owner dashboard · x402check",
   description,
   path: "/owner",
   omitMarkdown: true,
@@ -128,7 +128,7 @@ ${headTagsFragment({
     <h1>Owner dashboard</h1>
     <p class="lede">
       Prove you control an endpoint, then view <strong>only that endpoint’s</strong> periodic snapshot.
-      Snapshots are not live paid checks — agents should still call
+      Snapshots are not live paid checks · agents should still call
       <code>GET /preflight</code> ($${pricePerTool}).
     </p>
 

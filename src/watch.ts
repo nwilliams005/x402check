@@ -326,7 +326,7 @@ export function formatWatchTimeUtc(iso: string): string {
   return `${month} ${day}, ${year}, ${h}:${mm} ${ampm} UTC`;
 }
 
-/** 0x0000…0001 — empty/null → "" */
+/** 0x0000…0001 · empty/null → "" */
 export function shortenAddress(addr: string | null | undefined): string {
   if (!addr) return "";
   const a = addr.trim();
@@ -468,7 +468,7 @@ ${body}
 
 /**
  * Send a watch alert via Resend. Returns false when RESEND_API_KEY is unset or the API fails.
- * Uses fetch only — no Resend SDK (keeps the Worker bundle small).
+ * Uses fetch only · no Resend SDK (keeps the Worker bundle small).
  */
 export async function sendWatchEmail(
   env: Env,

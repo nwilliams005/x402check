@@ -6,7 +6,7 @@
  * ExactSvmScheme + facilitator /supported.
  *
  * payTo on Solana is the OWNER pubkey. Clients TransferChecked to the USDC ATA
- * derived from (owner, mint). That ATA must already exist — @x402/svm does not
+ * derived from (owner, mint). That ATA must already exist · @x402/svm does not
  * create it. Official Circle USDC mint on Solana mainnet:
  * EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
  */

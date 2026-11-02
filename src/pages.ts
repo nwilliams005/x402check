@@ -73,6 +73,7 @@ export function siteNav(currentPath = ""): string {
     <a class="brand" href="/">x402check</a>
     <nav>
       ${link("/docs", "Docs")}
+      ${link("/blog", "Blog")}
       ${link("/scan", "Scan")}
       ${link("/owner", "Owner")}
       ${link("/stats", "Stats")}
@@ -130,7 +131,7 @@ function softwareJsonLd(origin: string, pricePerTool: number) {
         operatingSystem: "Any",
         url: origin,
         description:
-          "x402 trust preflight for AI agents — check before paying. Endpoint live 402 + history (not wallet OFAC/simulation).",
+          "x402 trust preflight for AI agents · check before paying. Endpoint live 402 + history (not wallet OFAC/simulation).",
         offers: {
           "@type": "Offer",
           price: String(pricePerTool),
@@ -169,7 +170,7 @@ function softwareJsonLd(origin: string, pricePerTool: number) {
             name: "Is this x402 endpoint safe?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: `Call GET ${origin}/preflight?url=SELLER (pay $${pricePerTool} USDC). verdict=avoid means do not pay; caution means escalate; ok still requires your maxAmount check. Endpoint+history signals — not a legal scam ruling.`,
+              text: `Call GET ${origin}/preflight?url=SELLER (pay $${pricePerTool} USDC). verdict=avoid means do not pay; caution means escalate; ok still requires your maxAmount check. Endpoint+history signals · not a legal scam ruling.`,
             },
           },
           {
@@ -245,7 +246,7 @@ export function landingHtml(
   const noteBits = [
     stats?.noteDetail || null,
     onChainLine || null,
-    "Real counts only — never padded",
+    "Real counts only · never padded",
   ].filter(Boolean);
   const statsBlock = stats
     ? `<section class="card stats-card" aria-label="Live usage stats">
@@ -262,7 +263,7 @@ export function landingHtml(
 <head>
 ${headTagsFragment({
   origin,
-  title: "x402check — check before paying any x402 API (AI agent trust preflight)",
+  title: "x402check · check before paying any x402 API (AI agent trust preflight)",
   description,
   path: "/",
   jsonLd: softwareJsonLd(origin, pricePerTool),
@@ -274,6 +275,7 @@ ${headTagsFragment({
     <a class="brand" href="/">x402check</a>
     <nav>
       <a href="/docs">Docs</a>
+      <a href="/blog">Blog</a>
       <a href="/scan">Scan</a>
       <a href="/owner">Owner</a>
       <a href="/stats">Stats</a>
@@ -287,7 +289,7 @@ ${headTagsFragment({
     <h1>Trust-check a tool<br/><span>before your agent pays it.</span></h1>
     <p class="lede">
       One free regular check per wallet; then paid. You get that tool’s <strong>verdict</strong> plus its
-      <strong>history</strong> (uptime, payTo changes, price changes) — nothing else.
+      <strong>history</strong> (uptime, payTo changes, price changes) · nothing else.
       Cache-fresh responses target &lt;300&nbsp;ms. Built for agents that need to
       <em>check before paying</em>, ask <em>is this API a scam</em> /
       <em>is this x402 endpoint safe</em>, <em>verify payTo</em>, detect drift, compare sellers,
@@ -300,7 +302,7 @@ ${headTagsFragment({
     </div>
     <section class="grid">
       <article class="card"><h3>Check before paying</h3><p>Call preflight before any PAYMENT-SIGNATURE. avoid → deny. caution → escalate. ok → still enforce maxAmount.</p></article>
-      <article class="card"><h3>Scam / rug signals</h3><p>Live 402 + history: payTo swaps, price hikes, uptime. Not a legal scam ruling — endpoint signals agents can act on.</p></article>
+      <article class="card"><h3>Scam / rug signals</h3><p>Live 402 + history: payTo swaps, price hikes, uptime. Not a legal scam ruling · endpoint signals agents can act on.</p></article>
       <article class="card"><h3>Compact JSON</h3><p>Stable fields: verdict, payTo, priceUsd, reasonCodes, history for that URL only.</p></article>
       <article class="card"><h3>Discoverable</h3><p>OpenAPI, llms.txt, MCP (preflight + verify_payto + compare_tools + watch_tool), A2A, Bazaar. Live counts at /stats.</p></article>
     </section>
@@ -336,7 +338,7 @@ ${headTagsFragment({
       </details>
       <details>
         <summary>Can I watch a seller over time?</summary>
-        <p>Optional: <code>POST /watch</code> with <code>{url, webhookUrl?, email?}</code> — $5 Exact USDC buys 30 days of daily re-checks. Webhook and/or email on payTo, price, network, or availability change. Status: <code>GET /watch?id=…</code>.</p>
+        <p>Optional: <code>POST /watch</code> with <code>{url, webhookUrl?, email?}</code> · $5 Exact USDC buys 30 days of daily re-checks. Webhook and/or email on payTo, price, network, or availability change. Status: <code>GET /watch?id=…</code>.</p>
       </details>
     </section>
     <p class="fine">We never pay the target. Agents-first brand. Markdown twin: <a href="/index.md">/index.md</a>.</p>
@@ -354,7 +356,7 @@ export function docsHtml(origin: string, pricePerTool: number): string {
 <head>
 ${headTagsFragment({
   origin,
-  title: "Docs — x402check agent trust preflight",
+  title: "Docs · x402check agent trust preflight",
   description,
   path: "/docs",
   jsonLd: softwareJsonLd(origin, pricePerTool),
@@ -366,6 +368,7 @@ ${headTagsFragment({
     <a class="brand" href="/">x402check</a>
     <nav>
       <a href="/docs" aria-current="page">Docs</a>
+      <a href="/blog">Blog</a>
       <a href="/scan">Scan</a>
       <a href="/owner">Owner</a>
       <a href="/stats">Stats</a>
@@ -376,7 +379,7 @@ ${headTagsFragment({
   </header>
   <main class="wrap docs">
     <h1>Agent docs</h1>
-    <p class="lede">Paid per tool (one free regular check ever per wallet). Base unit <strong>$${pricePerTool}</strong>. Optional <strong>deep check $0.05</strong> (multi-probe + listings + recent on-chain sample). Optional <strong>watch $5 / 30 days</strong>. Owner snapshots on <a href="/scan">/scan</a> are private — not a public scanner. Use before any x402 settle when you need to <em>check before paying</em>, ask <em>is this API a scam</em> / <em>is this x402 endpoint safe</em>, <em>verify payTo</em>, check uptime, compare sellers, or keep a budget guard.</p>
+    <p class="lede">Paid per tool (one free regular check ever per wallet). Base unit <strong>$${pricePerTool}</strong>. Optional <strong>deep check $0.05</strong> (multi-probe + listings + recent on-chain sample). Optional <strong>watch $5 / 30 days</strong>. Owner snapshots on <a href="/scan">/scan</a> are private · not a public scanner. Use before any x402 settle when you need to <em>check before paying</em>, ask <em>is this API a scam</em> / <em>is this x402 endpoint safe</em>, <em>verify payTo</em>, check uptime, compare sellers, or keep a budget guard.</p>
     <h2>Single</h2>
     <pre>GET ${origin}/preflight?url=https%3A%2F%2Fwww.api-xpay.com%2Fx402%2Fping</pre>
     <h2>Deep check ($0.05)</h2>
@@ -405,10 +408,10 @@ ${headTagsFragment({
     </ul>
     <h2>Integrations</h2>
     <ul>
-      <li><a href="https://www.npmjs.com/package/x402check-ai-sdk"><code>x402check-ai-sdk</code></a> — Vercel AI SDK tools + <code>beforePayment</code></li>
-      <li><a href="https://www.npmjs.com/package/x402check-langchain"><code>x402check-langchain</code></a> — LangChain JS tools</li>
-      <li><a href="https://www.npmjs.com/package/plugin-x402check"><code>plugin-x402check</code></a> — ElizaOS plugin</li>
-      <li><a href="https://pypi.org/project/x402check-langchain/"><code>x402check-langchain</code></a> — LangChain Python tools (PyPI)</li>
+      <li><a href="https://www.npmjs.com/package/x402check-ai-sdk"><code>x402check-ai-sdk</code></a> · Vercel AI SDK tools + <code>beforePayment</code></li>
+      <li><a href="https://www.npmjs.com/package/x402check-langchain"><code>x402check-langchain</code></a> · LangChain JS tools</li>
+      <li><a href="https://www.npmjs.com/package/plugin-x402check"><code>plugin-x402check</code></a> · ElizaOS plugin</li>
+      <li><a href="https://pypi.org/project/x402check-langchain/"><code>x402check-langchain</code></a> · LangChain Python tools (PyPI)</li>
       <li><a href="https://github.com/nwilliams005/x402check-cloudflare-agent">Cloudflare Agents template</a></li>
       <li><a href="https://github.com/nwilliams005/x402check-examples">OpenAI Agents / LlamaIndex / CrewAI examples</a></li>
       <li>MCP Registry: <code>dev.x402check/mcp</code> · remote <code>https://x402check.dev/mcp</code></li>

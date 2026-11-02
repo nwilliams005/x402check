@@ -1,4 +1,4 @@
-# x402check discovery — research, audit, fixes (Oct 31, 2026)
+# x402check discovery · research, audit, fixes (Oct 31, 2026)
 
 Do not fabricate. Deploy / account creation / directory registration need Nicklaus approval.
 IndexNow / sitemap pings run **only after** production deploy.
@@ -13,7 +13,7 @@ IndexNow / sitemap pings run **only after** production deploy.
 | `llms.txt` | Present | Add `llms-full.txt`, keyword FAQ, markdown twins |
 | A2A agent-card | Present | Stronger skills/examples/iconUrl |
 | MCP | `/mcp` + `/mcp.json` + legacy card | Missing SEP-2127 `/mcp/server-card` + `/.well-known/ai-catalog.json` |
-| `robots.txt` | `Disallow: /` | Blocked crawlers — must Allow + Sitemap + AI bots |
+| `robots.txt` | `Disallow: /` | Blocked crawlers · must Allow + Sitemap + AI bots |
 | `sitemap.xml` | Missing | Add |
 | SEO (OG / canonical / JSON-LD) | Thin / absent | Add WebAPI + SoftwareApplication + FAQPage |
 | 402 body | Header only | Enrich JSON with howToPay steps |
@@ -59,7 +59,7 @@ IndexNow / sitemap pings run **only after** production deploy.
 - `sitemap.xml` covering landing, docs, llms, OpenAPI, MCP/A2A cards.
 - schema.org JSON-LD: `WebAPI` + `SoftwareApplication` + `FAQPage` answering “is this x402 endpoint safe?” / “verify payTo”.
 - Meta + Open Graph + canonical + markdown `rel=alternate`.
-- IndexNow: host `https://x402check.dev/{key}.txt` then POST changed URLs (Bing/Yandex/etc.) — **after deploy only**.
+- IndexNow: host `https://x402check.dev/{key}.txt` then POST changed URLs (Bing/Yandex/etc.) · **after deploy only**.
 
 ## Fixes applied in this repo (not yet deployed)
 
@@ -70,7 +70,7 @@ IndexNow / sitemap pings run **only after** production deploy.
 - `public/assets/icon.svg` + `public/indexnow-key.txt` (reference copies; Worker serves these paths itself).
 - Expanded `scripts/test-local.mjs` for all new discovery surfaces.
 
-## External to-do (needs Nicklaus / accounts) — exact URLs
+## External to-do (needs Nicklaus / accounts) · exact URLs
 
 Do **not** register or publish without his approval. DNS TXT for MCP Registry is reversible but still needs his OK before writing DNS.
 
@@ -85,13 +85,13 @@ Do **not** register or publish without his approval. DNS TXT for MCP Registry is
 | 402 Index | https://402index.io/ · POST `/api/v1/register` | Account or API body `{url,name,protocol}` |
 | x402dash | https://x402dash.com/submit/ | Form / POST https://api.x402dash.com/v1/register |
 | x402 List | https://www.x402-list.com/ | Free submit from own domain |
-| MCP Registry | https://modelcontextprotocol.io/registry/about | `mcp-publisher` installed; needs apex TXT on `x402check.dev` (`v=MCPv1; k=ed25519; p=…` — key at /workspace/.mcp-registry). CLOUDFLARE_API_TOKEN lacks DNS scope (403). Publish after npm package is live. |
+| MCP Registry | https://modelcontextprotocol.io/registry/about | `mcp-publisher` installed; needs apex TXT on `x402check.dev` (`v=MCPv1; k=ed25519; p=…` · key at /workspace/.mcp-registry). CLOUDFLARE_API_TOKEN lacks DNS scope (403). Publish after npm package is live. |
 | Smithery | https://smithery.ai/docs/build/publish | Account; Streamable HTTP `https://x402check.dev/mcp` |
 | Glama | https://glama.ai/mcp | Account / GitHub; submit server |
 | mcp.so | https://mcp.so/ | Account; submit listing |
 | npm packages | https://www.npmjs.com/ | Account `x402check-dev` ready; publish blocked until granular token with bypass-2fa (classic login token cannot publish). Packages prepared as unscoped `x402check-client` / `x402check-mcp` (@x402check/* taken by unrelated x402check.xyz). |
 
-## After-deploy checklist (account-free — run then)
+## After-deploy checklist (account-free · run then)
 
 ```bash
 # IndexNow (key already served at /32f90a760723b12a25ff3e310dbfd64a.txt after deploy)
@@ -119,7 +119,7 @@ Secrets `CDP_API_KEY_ID` / `CDP_API_KEY_SECRET` must already be set on the Worke
 - x402dash: already registered (`x402check.dev/preflight`); no public update API for description.
 - GitHub `nwilliams005/x402check`: description, topics, README versions line updated.
 - Foundation docs PR #4085 + Recall-Kitchen #129: wording/versions refreshed (signed commits).
-- AgentKit #1613: no npm version pin (uses `https://x402check.dev`) — skipped per Nicklaus.
+- AgentKit #1613: no npm version pin (uses `https://x402check.dev`) · skipped per Nicklaus.
 - Social routine files refreshed (`social/queue.md`, `daily_procedure.md`, `strategy.md`). UpdateRoutine tool not available in executor.
 - IndexNow + Bing IndexNow: 200.
 - x402scan: still needs account login for resources/register; no public API refresh found.

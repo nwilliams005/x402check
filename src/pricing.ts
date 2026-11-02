@@ -1,6 +1,6 @@
 /**
  * Heuristic category ceilings from Oct 31 research (cp0x / x402stats patterns).
- * Not market advice — flags only.
+ * Not market advice · flags only.
  */
 export type PriceCategory =
   | "micro_utility"

@@ -4,7 +4,7 @@
  * Fallback: DNS TXT or /.well-known/x402check-verify.txt containing a token.
  *
  * Sessions are opaque tokens scoped only to endpoints the holder verified.
- * Scan grades are returned only for those endpoints — never for others.
+ * Scan grades are returned only for those endpoints · never for others.
  * Errors are deliberately generic to avoid existence / grade leakage.
  */
 import type { Env } from "./types";
@@ -202,7 +202,7 @@ export async function issueOwnerChallenge(
     return { ok: false, error: "invalid_url", status: 400 };
   }
 
-  // Live probe for payTo — do not return grade/reasons
+  // Live probe for payTo · do not return grade/reasons
   let payTo = "";
   try {
     const check = await checkTool(url, env, { forceLive: true });
@@ -484,7 +484,7 @@ export type OwnerDashboardEndpoint = {
   url: string;
   verifiedAt: string;
   verifyMethod: OwnershipRecord["method"];
-  /** Periodic snapshot — not a live paid check */
+  /** Periodic snapshot · not a live paid check */
   snapshot: {
     grade: ScanGrade | "unknown";
     gradedAt: string | null;
@@ -555,8 +555,8 @@ export async function ownerDashboard(
         status: opted ? "active" : "revoked_or_off",
       },
       upsells: {
-        watch: `POST ${opts.origin}/watch with {url} — $5 Exact / 30 days of daily re-checks + alerts.`,
-        paidCheck: `GET ${opts.origin}/preflight?url=… — $${/* filled by caller docs */ 0.01} live check (not a snapshot).`,
+        watch: `POST ${opts.origin}/watch with {url} · $5 Exact / 30 days of daily re-checks + alerts.`,
+        paidCheck: `GET ${opts.origin}/preflight?url=… · $${/* filled by caller docs */ 0.01} live check (not a snapshot).`,
       },
     });
   }

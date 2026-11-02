@@ -216,7 +216,7 @@ export async function runPreflight(
         severity: status === 405 ? "warn" : "critical",
         message:
           status === 405
-            ? "Got HTTP 405 — unpaid GET did not yield x402 envelope."
+            ? "Got HTTP 405 · unpaid GET did not yield x402 envelope."
             : `Expected HTTP 402; got HTTP ${status}.`,
       });
       if (status === 405) {
@@ -252,7 +252,7 @@ export async function runPreflight(
     reasons.push({
       code: "invalid_payment_requirements",
       severity: "critical",
-      message: "HTTP 402 without parseable accepts[] — do not pay.",
+      message: "HTTP 402 without parseable accepts[] · do not pay.",
     });
   } else if (!fetchError) {
     reasons.push({
