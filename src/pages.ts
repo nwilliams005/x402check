@@ -73,6 +73,7 @@ export function siteNav(currentPath = ""): string {
     <a class="brand" href="/">x402check</a>
     <nav>
       ${link("/docs", "Docs")}
+      ${link("/scan", "Owners")}
       ${link("/stats", "Stats")}
       <a href="/openapi.json">OpenAPI</a>
       <a href="/llms.txt">llms.txt</a>
@@ -223,7 +224,7 @@ function softwareJsonLd(origin: string, pricePerTool: number) {
             name: "How much does x402check cost?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: `$${pricePerTool} USDC Exact per tool on Base (eip155:8453). Batch = N × unit in one settlement. Optional deep check is $0.05. Optional watch is $5 Exact / 30 days. No free tier. Live usage: ${origin}/stats.`,
+              text: `$${pricePerTool} USDC Exact per tool on Base (eip155:8453). Batch = N × unit in one settlement. Optional deep check is $0.05. Optional watch is $5 Exact / 30 days. One free regular check per wallet. Live usage: ${origin}/stats.`,
             },
           },
         ],
@@ -279,7 +280,7 @@ ${headTagsFragment({
     </nav>
   </header>
   <main class="wrap hero">
-    <p class="eyebrow">No free tier · $${pricePerTool} / tool · deep $0.05 · watch $5/30d</p>
+    <p class="eyebrow">$${pricePerTool} / tool · 1 free regular / wallet · deep $0.05 · watch $5/30d</p>
     <h1>Trust-check a tool<br/><span>before your agent pays it.</span></h1>
     <p class="lede">
       Every check is paid. You get that tool’s <strong>verdict</strong> plus its
@@ -370,7 +371,7 @@ ${headTagsFragment({
   </header>
   <main class="wrap docs">
     <h1>Agent docs</h1>
-    <p class="lede">Paid per tool. No free checks. Base unit <strong>$${pricePerTool}</strong>. Optional <strong>deep check $0.05</strong> (multi-probe + listings + recent on-chain sample). Optional <strong>watch $5 / 30 days</strong>. Use before any x402 settle when you need to <em>check before paying</em>, ask <em>is this API a scam</em> / <em>is this x402 endpoint safe</em>, <em>verify payTo</em>, check uptime, compare sellers, or keep a budget guard.</p>
+    <p class="lede">Paid per tool (one free regular check ever per wallet). Base unit <strong>$${pricePerTool}</strong>. Optional <strong>deep check $0.05</strong> (multi-probe + listings + recent on-chain sample). Optional <strong>watch $5 / 30 days</strong>. Owner snapshots on <a href="/scan">/scan</a> are private — not a public scanner. Use before any x402 settle when you need to <em>check before paying</em>, ask <em>is this API a scam</em> / <em>is this x402 endpoint safe</em>, <em>verify payTo</em>, check uptime, compare sellers, or keep a budget guard.</p>
     <h2>Single</h2>
     <pre>GET ${origin}/preflight?url=https%3A%2F%2Fwww.api-xpay.com%2Fx402%2Fping</pre>
     <h2>Deep check ($0.05)</h2>

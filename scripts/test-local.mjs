@@ -71,6 +71,8 @@ async function main() {
     const discoveryPaths = [
       "/",
       "/docs",
+      "/scan",
+      "/owner",
       "/example",
       "/stats",
       "/index.md",
@@ -844,6 +846,121 @@ async function main() {
           !!spec?.paths?.["/preflight/deep"]?.get &&
           !!spec?.paths?.["/watch"]?.post &&
           !!spec?.paths?.["/watch/renew"],
+      });
+      results.push({
+        test: "openapi has free-check + owner + badge (no public scan JSON)",
+        status: r.status,
+        ok:
+          r.status === 200 &&
+          !!spec?.paths?.["/preflight/free/challenge"]?.get &&
+          !!spec?.paths?.["/preflight/free"]?.post &&
+          !!spec?.paths?.["/owner/challenge"]?.post &&
+          !!spec?.paths?.["/owner/dashboard"]?.get &&
+          !!spec?.paths?.["/owner/badge"]?.post &&
+          !!spec?.paths?.["/badge/{id}"]?.get &&
+          !!spec?.paths?.["/scan"]?.get &&
+          !spec?.paths?.["/scan/stats"] &&
+          !spec?.paths?.["/scan/export"] &&
+          !spec?.paths?.["/scan/{id}"],
+      });
+    }
+
+    // /scan explain page — no public aggregate numbers dump
+    {
+      const r = await fetch(`${BASE}/scan`);
+      const html = await r.text();
+      results.push({
+        test: "GET /scan explain + CTA, not a data dump",
+        status: r.status,
+        ok:
+          r.status === 200 &&
+          html.includes("Verify ownership") &&
+          html.includes("/preflight") &&
+          html.includes("Owner dashboard") &&
+          !html.includes("totalScanned") &&
+          !html.includes("ecosystemGrade"),
+      });
+    }
+
+    // Owner dashboard requires auth
+    {
+      const r = await fetch(`${BASE}/owner/dashboard`);
+      const body = await r.json().catch(() => ({}));
+      results.push({
+        test: "GET /owner/dashboard unauthorized without bearer",
+        status: r.status,
+        ok: r.status === 401 && !!body?.error,
+      });
+    }
+
+    // Free challenge validation
+    {
+      const r = await fetch(`${BASE}/preflight/free/challenge?address=not-an-address`);
+      const body = await r.json().catch(() => ({}));
+      results.push({
+        test: "GET /preflight/free/challenge invalid address",
+        status: r.status,
+        ok: r.status === 400 && body?.error === "invalid_address",
+      });
+    }
+    {
+      const addr = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+      const r = await fetch(
+        `${BASE}/preflight/free/challenge?address=${addr}`,
+      );
+      const body = await r.json().catch(() => ({}));
+      results.push({
+        test: "GET /preflight/free/challenge issues message",
+        status: r.status,
+        ok:
+          r.status === 200 &&
+          typeof body?.message === "string" &&
+          typeof body?.nonce === "string" &&
+          body.message.includes("free-check"),
+        nonce: body?.nonce,
+      });
+    }
+
+    // Unknown badge → empty 404
+    {
+      const r = await fetch(`${BASE}/badge/${"ab".repeat(24)}.svg`);
+      const text = await r.text();
+      results.push({
+        test: "GET unknown badge → empty 404",
+        status: r.status,
+        ok: r.status === 404 && text === "",
+      });
+    }
+
+    // sitemap includes /scan, not per-endpoint scan pages
+    {
+      const r = await fetch(`${BASE}/sitemap.xml`);
+      const xml = await r.text();
+      results.push({
+        test: "sitemap has /scan + /owner, no /scan/ endpoint pages",
+        status: r.status,
+        ok:
+          r.status === 200 &&
+          xml.includes("/scan") &&
+          xml.includes("/owner") &&
+          !xml.includes("/scan/https") &&
+          !/\/scan\/[a-f0-9]{16}/.test(xml),
+      });
+    }
+
+    // llms documents free check + private scanner
+    {
+      const r = await fetch(`${BASE}/llms.txt`);
+      const text = await r.text();
+      results.push({
+        test: "llms.txt documents free check + private scanner",
+        status: r.status,
+        ok:
+          r.status === 200 &&
+          text.includes("/preflight/free") &&
+          text.includes("/scan") &&
+          text.includes("private") &&
+          text.includes("No public scanner"),
       });
     }
   } finally {

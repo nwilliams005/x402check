@@ -406,6 +406,8 @@ export function sitemapXml(origin: string, lastmod: string): string {
   const urls = [
     "/",
     "/docs",
+    "/scan",
+    "/owner",
     "/terms",
     "/privacy",
     "/cookies",

@@ -2,16 +2,17 @@
   "name": "x402check",
   "version": "0.1.0",
   "private": true,
-  "description": "x402check \u2014 paid per-tool trust check before an agent pays an x402 endpoint",
+  "description": "x402check — paid per-tool trust check before an agent pays an x402 endpoint",
   "type": "module",
   "scripts": {
     "dev": "WRANGLER_CACHE_DIR=/tmp/wcache wrangler dev --config wrangler.dev.toml --local --port 8787 --ip 127.0.0.1",
     "test:local": "WRANGLER_CACHE_DIR=/tmp/wcache node scripts/test-local.mjs",
     "typecheck": "tsc --noEmit",
-    "deploy:dry": "echo 'See DEPLOY.md \u2014 do not deploy without Nicklaus approval'",
+    "deploy:dry": "echo 'See DEPLOY.md — do not deploy without Nicklaus approval'",
     "test:payconfig": "node scripts/test-payconfig.mjs",
     "test:mcp-payment": "npx --yes tsx scripts/test-mcp-payment.mjs",
     "test:stats-watch": "npx --yes tsx scripts/test-stats-watch.mjs",
+    "test:free-scan-badge": "npx --yes tsx scripts/test-free-scan-badge.mjs",
     "seed:stats": "node scripts/seed-stats.mjs",
     "seed:stats:write": "node scripts/seed-stats.mjs --write"
   },
@@ -23,7 +24,8 @@
     "@x402/extensions": "^2.29.0",
     "@x402/hono": "^2.29.0",
     "@x402/svm": "^2.29.0",
-    "hono": "^4.13.7"
+    "hono": "^4.13.7",
+    "viem": "^2.48.11"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260503.1",
