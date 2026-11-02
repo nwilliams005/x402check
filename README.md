@@ -10,6 +10,8 @@
 
 Live site: **https://x402check.dev**
 
+**Shipped versions (2026-11-01):** `x402check-mcp@0.1.3` · `x402check-client@0.1.2` · `x402check-langchain@0.1.1` (npm + PyPI) · `x402check-ai-sdk@0.1.1` · `plugin-x402check@0.1.2` · MCP Registry `dev.x402check/mcp@0.1.3`
+
 | Surface | URL |
 |---------|-----|
 | Preflight | `GET /preflight?url=` · `POST /preflight` (batch) |
