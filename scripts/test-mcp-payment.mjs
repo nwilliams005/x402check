@@ -36,7 +36,7 @@ function check(name, fn) {
     });
 }
 
-const UNIT = 0.002;
+const UNIT = 0.01;
 const cfg = resolvePayConfig({}); // Base-only, default payTo
 
 function mockAccepts(toolCount = 1) {
@@ -88,7 +88,7 @@ function samplePayload(accepted) {
       authorization: {
         from: "0x857b06519E91e3A54538791bDbb0E22373e36b66",
         to: DEFAULT_PAY_TO_EVM,
-        value: "2000",
+        value: "10000",
         validAfter: "1",
         validBefore: "9999999999",
         nonce: "0x1",
@@ -97,10 +97,10 @@ function samplePayload(accepted) {
   };
 }
 
-await check("PAID_TOOLS covers five paid tools including watch", () => {
+await check("PAID_TOOLS covers six paid tools including deep + watch", () => {
   assert.deepEqual(
     [...PAID_TOOLS].sort(),
-    ["compare_tools", "preflight_batch", "preflight_check", "verify_payto", "watch_tool"].sort(),
+    ["compare_tools", "deep_check", "preflight_batch", "preflight_check", "verify_payto", "watch_tool"].sort(),
   );
 });
 
@@ -117,6 +117,8 @@ await check("billableToolCount single + batch dedupe/cap", () => {
   assert.equal(billableToolCount("preflight_batch", { urls: many }), 25);
   assert.equal(billableToolCount("watch_tool", { url: "https://seller.example/x" }), 1);
   assert.equal(billableToolCount("watch_tool", {}), 0);
+  assert.equal(billableToolCount("deep_check", { url: "https://seller.example/x" }), 1);
+  assert.equal(billableToolCount("deep_check", {}), 0);
 });
 
 await check("toolResourceInfo uses mcp://tool/{name}", () => {
@@ -132,9 +134,9 @@ await check("static accepts match HTTP Base Exact shape + scaled amount", () => 
   assert.equal(one.network, "eip155:8453");
   assert.equal(one.payTo, DEFAULT_PAY_TO_EVM);
   assert.equal(one.asset, USDC_BASE_MAINNET);
-  assert.equal(one.amount, "2000");
+  assert.equal(one.amount, "10000");
   const three = buildStaticAccepts(cfg, UNIT, 3)[0];
-  assert.equal(three.amount, "6000");
+  assert.equal(three.amount, "30000");
   assert.equal(three.extra.chargedTools, 3);
   assert.equal(three.extra.pricePerToolUsd, UNIT);
 });
@@ -182,7 +184,7 @@ await check("unpaid tools/call → PaymentRequired with accepts", async () => {
   assert.equal(res.structuredContent.x402Version, 2);
   assert.ok(res.structuredContent.accepts.length >= 1);
   assert.equal(res.structuredContent.accepts[0].payTo, DEFAULT_PAY_TO_EVM);
-  assert.equal(res.structuredContent.accepts[0].amount, "2000");
+  assert.equal(res.structuredContent.accepts[0].amount, "10000");
   assert.equal(
     res.structuredContent.resource.url,
     "mcp://tool/preflight_check",
@@ -287,7 +289,7 @@ await check("settle failure after run → PaymentRequired without tool content",
   assert.equal(res.isError, true);
   assert.equal(res.structuredContent.error, "settlement_failed");
   assert.equal(res.structuredContent.results, undefined);
-  assert.ok(res.structuredContent.accepts[0].amount === "4000");
+  assert.ok(res.structuredContent.accepts[0].amount === "20000");
 });
 
 await check("batch accepts amount scales with toolCount", async () => {
@@ -300,7 +302,7 @@ await check("batch accepts amount scales with toolCount", async () => {
     gate: mockGate(),
     run: async () => ({}),
   });
-  assert.equal(res.structuredContent.accepts[0].amount, "6000");
+  assert.equal(res.structuredContent.accepts[0].amount, "30000");
   assert.equal(res.structuredContent.accepts[0].extra.chargedTools, 3);
 });
 

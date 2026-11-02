@@ -139,8 +139,8 @@ async function main() {
 
   console.log("Fetching on-chain USDC transfers to", PAY_TO);
   const transfers = await fetchOnChainTransfers();
-  const checkPrice = transfers.filter((t) => t.atomic === 2000);
-  // Only count Exact $0.002 check payments (exclude future $5 watches etc.)
+  const checkPrice = transfers.filter((t) => t.atomic === 10000 || t.atomic === 50000 || t.atomic === 2000);
+  // Count Exact base ($0.01=10000) and deep ($0.05=50000) checks; exclude $5 watches (5000000).
   const paid = checkPrice;
   const unique = new Set(paid.map((t) => t.from));
   const internal = paid.filter((t) => t.internalTest).length;
@@ -160,7 +160,7 @@ async function main() {
     transfers: paid,
   };
 
-  console.log("On-chain $0.002 transfers:", paid.length, "usdc", usdcTotal, "wallets", unique.size);
+  console.log("On-chain check transfers ($0.01/$0.05/legacy $0.002):", paid.length, "usdc", usdcTotal, "wallets", unique.size);
 
   const toolKeys = await cfKvList("tool:");
   let totalChecks = 0;
@@ -211,7 +211,7 @@ async function main() {
   // Cross-check: paid on-chain should match tool check count when every check was billed.
   if (totalChecks !== paid.length) {
     console.warn(
-      `cross-check: tool history checks=${totalChecks} vs on-chain $0.002 transfers=${paid.length}`,
+      `cross-check: tool history checks=${totalChecks} vs on-chain check transfers=${paid.length}`,
     );
   }
 

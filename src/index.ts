@@ -13,8 +13,11 @@ import type { Env, ToolCheck } from "./types";
 import { createFacilitatorClient } from "./facilitator";
 import { baseAcceptRequirement, buildAccepts, resolvePayConfig, USDC_BASE_MAINNET } from "./payconfig";
 import { checkTool, isBlockedHost } from "./preflight";
+import { deepCheck, deepUpsellHint, watchUpsellHint } from "./deep";
 import {
   DEFAULT_PRICE_PER_TOOL_USD,
+  DEEP_CHECK_PRICE_USD,
+  DEEP_CHECK_ATOMIC,
   MAX_BATCH,
   WATCH_PRICE_USD,
   dynamicPriceForRequest,
@@ -362,7 +365,7 @@ function paymentRoutes(env: Env, origin: string) {
   return {
     "GET /preflight": {
       description:
-        "Check before paying any x402 tool: is this API a scam/safe? Trust-check one seller URL (live 402 + history). Use for verify-payTo, uptime, price/wallet drift, budget guard, validate 402, debug failing settle. Returns ok|caution|avoid + that tool's history only. $0.002/URL. No free tier. Endpoint+history — not wallet OFAC/simulation.",
+        `Check before paying any x402 tool: is this API a scam/safe? Trust-check one seller URL (live 402 + history). Use for verify-payTo, uptime, price/wallet drift, budget guard, validate 402, debug failing settle. Returns ok|caution|avoid + that tool's history only. $${u}/URL. No free tier. Endpoint+history — not wallet OFAC/simulation. Optional deeper signal: GET /preflight/deep ($${DEEP_CHECK_PRICE_USD}).`,
       mimeType: "application/json",
       serviceName,
       tags,
@@ -423,6 +426,45 @@ function paymentRoutes(env: Env, origin: string) {
         }),
       },
       accepts,
+    },
+    "GET /preflight/deep": {
+      description:
+        `Deep trust check ($${DEEP_CHECK_PRICE_USD} Exact USDC): everything in GET /preflight, plus repeated live probes for payTo/price consistency, recent public Base USDC transfers into the seller payTo, Bazaar + 402 Index listing samples, and drift vs last KV history. Does not claim OFAC, wallet simulation, or full chain history.`,
+      mimeType: "application/json",
+      serviceName,
+      tags: [...tags, "deep", "on-chain-sample"],
+      iconUrl,
+      extensions: {
+        ...declareDiscoveryExtension({
+          input: { url: "https://www.api-xpay.com/x402/ping" },
+          inputSchema: {
+            properties: {
+              url: {
+                type: "string",
+                description: "Absolute https URL of the x402 seller to deep-check",
+              },
+            },
+            required: ["url"],
+          },
+          output: { example: { ...outputExample, deep: true, chargedUsd: DEEP_CHECK_PRICE_USD } },
+        }),
+      },
+      accepts: [
+        {
+          scheme: "exact",
+          price: money(DEEP_CHECK_PRICE_USD),
+          network: pay.evmNetwork,
+          payTo: pay.evmPayTo,
+          maxTimeoutSeconds: 120,
+          extra: {
+            priceUsd: DEEP_CHECK_PRICE_USD,
+            pricingModel: "deep_check",
+            assetHint: "USDC",
+            chainFamily: "evm",
+            product: "deep_check",
+          },
+        },
+      ],
     },
     "POST /watch": {
       description:
@@ -604,31 +646,88 @@ async function withPayment(
         accepts = [
           watchAcceptRequirement(pay.evmPayTo, pay.evmNetwork, USDC_BASE_MAINNET),
         ];
+      } else if (path.startsWith("/preflight/deep")) {
+        accepts = [baseAcceptRequirement(pay, DEEP_CHECK_PRICE_USD)];
       } else {
         accepts = [baseAcceptRequirement(pay, unit(c.env))];
       }
     }
 
-    const body =
-      path.startsWith("/watch")
-        ? {
-            ...paymentRequiredBody(origin, WATCH_PRICE_USD, accepts),
-            product: "watch",
-            priceUsd: WATCH_PRICE_USD,
-            durationDays: 30,
-            amountAtomic: WATCH_PRICE_ATOMIC,
-            note: "One Exact USDC payment buys 30 days of daily re-checks for one tool URL.",
-          }
-        : paymentRequiredBody(origin, unit(c.env), accepts);
+    let body: Record<string, unknown>;
+    if (path.startsWith("/watch")) {
+      body = {
+        ...paymentRequiredBody(origin, WATCH_PRICE_USD, accepts),
+        product: "watch",
+        priceUsd: WATCH_PRICE_USD,
+        durationDays: 30,
+        amountAtomic: WATCH_PRICE_ATOMIC,
+        note: "One Exact USDC payment buys 30 days of daily re-checks for one tool URL.",
+      };
+    } else if (path.startsWith("/preflight/deep")) {
+      body = {
+        ...paymentRequiredBody(origin, DEEP_CHECK_PRICE_USD, accepts),
+        product: "deep_check",
+        priceUsd: DEEP_CHECK_PRICE_USD,
+        amountAtomic: DEEP_CHECK_ATOMIC,
+        note: "Deep check: multi-probe + listings + recent public Base USDC-to-payTo sample + KV drift.",
+      };
+    } else {
+      body = paymentRequiredBody(origin, unit(c.env), accepts);
+    }
 
     return new Response(JSON.stringify(body), { status: 402, headers });
   }
   return out;
 }
 
-app.use("/preflight", async (c, next) =>
-  withPayment(c, next, (k) => k.includes("/preflight")),
-);
+app.use("/preflight", async (c, next) => {
+  // Exact /preflight only — deep has its own middleware
+  if (new URL(c.req.url).pathname !== "/preflight") return next();
+  return withPayment(c, next, (k) => k === "GET /preflight" || k === "POST /preflight");
+});
+app.use("/preflight/deep", async (c, next) => {
+  bridgeLegacyPaymentHeader(c);
+  return withPayment(c, next, (k) => k.includes("/preflight/deep"));
+});
+
+app.get("/preflight/deep", async (c) => {
+  const url = c.req.query("url");
+  if (!url) {
+    return c.json(
+      {
+        error: "missing_url",
+        message: "Query `url` required for deep check.",
+      },
+      400,
+    );
+  }
+  if (isBlockedHost(url)) {
+    return c.json(
+      {
+        url,
+        verdict: "avoid",
+        reasonCodes: ["unreachable"],
+        error: "Refusing private/localhost/metadata hosts.",
+      },
+      400,
+    );
+  }
+  const t0 = Date.now();
+  const result = await deepCheck(url, c.env);
+  const bypass =
+    c.env.ALLOW_LOCAL_BYPASS === "true" &&
+    (c.req.header("x-local-dev-bypass") === "1" ||
+      c.req.query("local_bypass") === "1");
+  await recordCheckStats(c.env.PAYTO_HISTORY, {
+    verdict: result.verdict,
+    paid: !bypass,
+    isNewTool: result.history.checks === 1,
+  });
+  c.header("Server-Timing", `deep;dur=${Date.now() - t0}`);
+  return c.json(result);
+});
+
+
 
 app.use("/watch/renew", async (c, next) => {
   if (c.req.method !== "POST") return next();
@@ -678,12 +777,11 @@ app.get("/preflight", async (c) => {
   });
   c.header("Server-Timing", `app;dur=${Date.now() - t0}`);
   // Helpful, never pushy: one plain mention of watch
+  const origin = originOf(c);
   return c.json({
     ...result,
-    watchHint:
-      "Optional: POST /watch {url, webhookUrl} — $" +
-      WATCH_PRICE_USD +
-      "/30d daily re-check + webhook/email on payTo/price/network/availability change.",
+    watchHint: watchUpsellHint(),
+    deepHint: deepUpsellHint(origin),
   });
 });
 
@@ -762,10 +860,8 @@ app.post("/preflight", async (c) => {
     elapsedMs: Date.now() - t0,
     pricingNote:
       "Exact scheme: one settlement covering N×unit for this HTTP request (not N separate txs).",
-    watchHint:
-      "Optional: POST /watch {url, webhookUrl} — $" +
-      WATCH_PRICE_USD +
-      "/30d daily re-check + webhook/email on change.",
+    watchHint: watchUpsellHint(),
+    deepHint: deepUpsellHint(originOf(c)),
   });
 });
 

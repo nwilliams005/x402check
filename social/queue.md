@@ -32,7 +32,7 @@ x402check scores two things before your agent pays:
 2. That payTo's check history (uptime, price/payTo changes)
 
 Verdict: ok | caution | avoid
-$0.002 USDC on Base. No free tier.
+$0.01 USDC on Base. No free tier.
 https://x402check.dev
 ```
 
@@ -49,7 +49,7 @@ MCP: https://x402check.dev/mcp
 npm: x402check-mcp@0.1.3
 Tools: preflight_check, verify_payto, compare_tools, watch_tool
 
-$0.002 Exact USDC/URL on Base. Live stats: /stats
+$0.01 Exact USDC/URL on Base. Live stats: /stats
 Docs: https://x402check.dev/llms.txt
 ```
 
@@ -81,7 +81,7 @@ npm i x402check-client
 
 Also: x402check-ai-sdk (Vercel AI SDK), x402check-langchain, plugin-x402check (Cloudflare Agents).
 
-$0.002 / check on Base.
+$0.01 / check on Base.
 https://x402check.dev
 ```
 
@@ -92,7 +92,7 @@ https://x402check.dev
 **Format:** pricing · **Status:** ready
 
 ```
-Price is the product: $0.002 USDC per tool URL on Base. No free tier, no accounts.
+Price is the product: $0.01 USDC per tool URL on Base. No free tier, no accounts.
 
 Agents pay the same whether they hit the site or MCP (https://x402check.dev/mcp).
 
@@ -128,7 +128,7 @@ verify_payto → score one address
 compare_tools → side-by-side URLs
 
 MCP remote: https://x402check.dev/mcp
-$0.002 USDC / check. This account is the project.
+$0.01 USDC / check. This account is the project.
 ```
 
 ---
@@ -154,7 +154,7 @@ Site today: https://x402check.dev
 ```
 Coming: a $5/mo watch subscription.
 
-Re-check a tool URL on a schedule and alert when its payTo or price changes. Same Base USDC rails as the $0.002 one-shot check.
+Re-check a tool URL on a schedule and alert when its payTo or price changes. Same Base USDC rails as the $0.01 one-shot (deep is $0.05).
 
 Interest? Reply. Product page will land on https://x402check.dev
 ```
@@ -184,7 +184,7 @@ https://x402check.dev
 Failure mode we built for: the 402 looks fine, but payTo flipped since yesterday.
 
 x402check compares the live challenge to that seller's history and returns caution/avoid when price or payTo jumps.
-$0.002 / check.
+$0.01 / check.
 https://x402check.dev
 ```
 
@@ -203,7 +203,7 @@ Plugin map for agents that already pay with x402:
 • Cloudflare Agents — plugin-x402check
 • ElizaOS — via plugin
 
-$0.002 USDC on Base.
+$0.01 USDC on Base.
 ```
 
 ---

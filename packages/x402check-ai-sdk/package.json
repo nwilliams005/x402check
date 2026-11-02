@@ -1,6 +1,6 @@
 {
   "name": "x402check-ai-sdk",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Vercel AI SDK tools for x402check \u2014 preflight_check, verify_payto, compare_tools and beforePayment guard before an agent pays an x402 endpoint (ok|caution|avoid) \u2014 check before paying; is this API a scam/safe.",
   "type": "module",
   "main": "./src/index.js",

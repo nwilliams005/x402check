@@ -651,6 +651,112 @@ async function main() {
       });
     }
 
+
+    // Unpaid GET /preflight → 402 at $0.01 (10000 atomic)
+    {
+      const r = await fetch(`${BASE}/preflight?url=${encode(TARGETS[0])}`);
+      const body = await r.json().catch(() => ({}));
+      const pr = r.headers.get("PAYMENT-REQUIRED") || r.headers.get("payment-required") || "";
+      let amountOk =
+        body?.howToPay?.amountAtomicUsdc === "10000" ||
+        body?.howToPay?.pricePerToolUsd === 0.01;
+      if (pr) {
+        try {
+          const decoded = JSON.parse(Buffer.from(pr, "base64").toString("utf8"));
+          const accepts = decoded?.accepts || [];
+          amountOk =
+            amountOk ||
+            accepts.some(
+              (a) => String(a.amount) === "10000" || String(a.maxAmountRequired) === "10000",
+            );
+        } catch {
+          try {
+            const decoded = JSON.parse(pr);
+            const accepts = decoded?.accepts || [];
+            amountOk =
+              amountOk ||
+              accepts.some((a) => String(a.amount) === "10000");
+          } catch { /* ignore */ }
+        }
+      }
+      const acceptsBody = body?.accepts || [];
+      amountOk =
+        amountOk ||
+        acceptsBody.some((a) => String(a.amount) === "10000");
+      results.push({
+        test: "unpaid GET /preflight → 402 $0.01",
+        status: r.status,
+        ok: r.status === 402 && amountOk,
+        amountAtomicUsdc: body?.howToPay?.amountAtomicUsdc,
+        pricePerToolUsd: body?.howToPay?.pricePerToolUsd,
+      });
+    }
+
+    // Unpaid GET /preflight/deep → 402 at $0.05 (50000 atomic)
+    {
+      const r = await fetch(`${BASE}/preflight/deep?url=${encode(TARGETS[0])}`);
+      const body = await r.json().catch(() => ({}));
+      const pr = r.headers.get("PAYMENT-REQUIRED") || r.headers.get("payment-required") || "";
+      let amountOk =
+        body?.amountAtomic === "50000" ||
+        body?.priceUsd === 0.05 ||
+        body?.howToPay?.amountAtomicUsdc === "50000";
+      if (pr) {
+        try {
+          const decoded = JSON.parse(Buffer.from(pr, "base64").toString("utf8"));
+          const accepts = decoded?.accepts || [];
+          amountOk =
+            amountOk ||
+            accepts.some(
+              (a) => String(a.amount) === "50000" || String(a.maxAmountRequired) === "50000",
+            );
+        } catch {
+          try {
+            const decoded = JSON.parse(pr);
+            const accepts = decoded?.accepts || [];
+            amountOk =
+              amountOk ||
+              accepts.some((a) => String(a.amount) === "50000");
+          } catch { /* ignore */ }
+        }
+      }
+      const acceptsBody = body?.accepts || [];
+      amountOk =
+        amountOk ||
+        acceptsBody.some((a) => String(a.amount) === "50000");
+      results.push({
+        test: "unpaid GET /preflight/deep → 402 $0.05",
+        status: r.status,
+        ok: r.status === 402 && amountOk,
+        priceUsd: body?.priceUsd,
+        amountAtomic: body?.amountAtomic,
+        product: body?.product,
+      });
+    }
+
+    // Bypass deep check shape
+    {
+      const r = await fetch(
+        `${BASE}/preflight/deep?local_bypass=1&url=${encode(TARGETS[0])}`,
+      );
+      const body = await r.json().catch(() => ({}));
+      results.push({
+        test: "bypass GET /preflight/deep shape",
+        status: r.status,
+        ok:
+          r.status === 200 &&
+          body?.deep === true &&
+          body?.chargedUsd === 0.05 &&
+          body?.priceConsistency &&
+          body?.onChainPayTo &&
+          body?.listings &&
+          body?.driftVsLast &&
+          typeof body?.watchHint === "string",
+        verdict: body?.verdict,
+        deep: body?.deep,
+      });
+    }
+
     // Unpaid POST /watch → 402 with $5 (5000000)
     {
       const r = await fetch(`${BASE}/watch`, {
@@ -719,7 +825,9 @@ async function main() {
           r.status === 200 &&
           text.includes("/stats") &&
           text.includes("/watch") &&
-          text.includes("watch_tool"),
+          text.includes("watch_tool") &&
+          text.includes("deep_check") &&
+          text.includes("/preflight/deep"),
       });
     }
 
@@ -728,11 +836,12 @@ async function main() {
       const r = await fetch(`${BASE}/openapi.json`);
       const spec = await r.json();
       results.push({
-        test: "openapi has /stats and /watch",
+        test: "openapi has /stats, /preflight/deep, and /watch",
         status: r.status,
         ok:
           r.status === 200 &&
           !!spec?.paths?.["/stats"] &&
+          !!spec?.paths?.["/preflight/deep"]?.get &&
           !!spec?.paths?.["/watch"]?.post &&
           !!spec?.paths?.["/watch/renew"],
       });

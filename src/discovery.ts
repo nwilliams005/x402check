@@ -19,7 +19,7 @@ export function agentCard(origin: string, pricePerTool: number) {
       "Check before paying any x402 tool. Trust-check the seller URL: is this API a scam/legit, is it reachable, is the 402 real, what payTo/price does it demand, and has payTo or price drifted. Returns ok|caution|avoid + that tool's history only. Budget guard and compare helpers for agents. Paid per URL. Not a wallet OFAC/drainer scanner.",
     url: `${origin}/preflight`,
     preferredTransport: "HTTP+JSON",
-    version: "0.2.3",
+    version: "0.3.0",
     documentationUrl: `${origin}/docs`,
     iconUrl: `${origin}/assets/icon.svg`,
     provider: {
@@ -134,7 +134,7 @@ export function x402WellKnown(origin: string, pricePerTool: number) {
     llms: `${origin}/llms.txt`,
     instructions:
       `Always GET ${origin}/preflight?url=SELLER before PAYMENT-SIGNATURE to that seller. Deny when verdict=avoid. Unit $${pricePerTool} USDC Exact on Base (eip155:8453).`,
-    resources: [`${origin}/preflight`],
+    resources: [`${origin}/preflight`, `${origin}/preflight/deep`],
     resourceDetails: [
       {
         method: "GET",
@@ -151,6 +151,13 @@ export function x402WellKnown(origin: string, pricePerTool: number) {
         pricing: "dynamic",
         maxItems: 25,
       },
+      {
+        method: "GET",
+        path: "/preflight/deep",
+        description: "Optional deep check: multi-probe + listings + recent public Base USDC-to-payTo sample + KV drift.",
+        priceUsd: 0.05,
+        pricing: "fixed",
+      },
     ],
   };
 }
@@ -163,8 +170,8 @@ export function mcpServerCardLegacy(origin: string, pricePerTool: number) {
   return {
     name: "x402check",
     description:
-      "Check before paying x402 seller URLs. Answers is-this-API-a-scam, is-this-x402-endpoint-safe, verify-payTo, uptime, price drift, compare tools. Paid per tool via x402 Exact. Tools: preflight_check, verify_payto, preflight_batch, compare_tools, watch_tool.",
-    version: "0.2.3",
+      "Check before paying x402 seller URLs. Answers is-this-API-a-scam, is-this-x402-endpoint-safe, verify-payTo, uptime, price drift, compare tools. Paid per tool via x402 Exact. Tools: preflight_check, verify_payto, preflight_batch, compare_tools, deep_check, watch_tool.",
+    version: "0.3.0",
     url: `${origin}/mcp`,
     transport: "streamable-http",
     tools: [
@@ -261,6 +268,27 @@ export function mcpServerCardLegacy(origin: string, pricePerTool: number) {
         },
       },
       {
+        name: "deep_check",
+        description:
+          "Optional $0.05 deep trust check: base preflight plus repeated probes, public Base USDC-to-payTo sample, Bazaar/402 Index listings, and KV drift.",
+        inputSchema: {
+          type: "object",
+          required: ["url"],
+          properties: {
+            url: {
+              type: "string",
+              description: "Absolute https URL of the x402 seller to deep-check",
+            },
+          },
+        },
+        annotations: {
+          title: "Deep x402 endpoint trust check",
+          readOnlyHint: true,
+          openWorldHint: true,
+          destructiveHint: false,
+        },
+      },
+      {
         name: "watch_tool",
         description:
           "Optional $5 Exact / 30d daily re-check + webhook when payTo, price, network, or availability changes. After a one-shot preflight when you will revisit the same seller.",
@@ -297,7 +325,7 @@ export function mcpServerCardSep(origin: string, pricePerTool: number) {
     title: "x402check",
     description:
       `Check before paying x402 seller URLs ($${pricePerTool}/tool). Answers is-this-API-a-scam / is-this-endpoint-safe. Returns ok|caution|avoid + history (uptime, payTo/price changes). Use before PAYMENT-SIGNATURE; verify payTo; compare tools; budget guard; optional watch_tool. Endpoint+history check — not wallet OFAC/simulation.`,
-    version: "0.2.3",
+    version: "0.3.0",
     icons: [{ src: `${origin}/assets/icon.svg`, mimeType: "image/svg+xml", sizes: ["any"] }],
     remotes: [
       {

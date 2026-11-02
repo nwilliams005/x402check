@@ -1,6 +1,6 @@
 # x402check
 
-Paid per-tool trust check **before an AI agent pays** an x402 endpoint. **No free checks.** Unit **$0.002**/tool (Exact USDC on Base). Live: **https://x402check.dev**
+Paid per-tool trust check **before an AI agent pays** an x402 endpoint. **No free checks.** Unit **$0.01**/tool (Exact USDC on Base). Optional deep check **$0.05**. Live: **https://x402check.dev**
 
 Use when agents or people ask: *check before paying*, *is this API a scam?*, *is this x402 endpoint safe?*, *verify payTo*, *detect price/wallet drift*, *compare sellers*, *budget guard*.
 
@@ -43,4 +43,4 @@ npm run test:local
 2. Retry with `params._meta["x402/payment"]` = PaymentPayload.
 3. Success → tool result + `result._meta["x402/payment-response"]`.
 
-Unit **$0.002** per seller URL (batch = N×unit, one Exact settlement). `watch_tool` is a fixed **$5** Exact / 30 days.
+Unit **$0.01** per seller URL (batch = N×unit, one Exact settlement). `deep_check` is a fixed **$0.05**. `watch_tool` is a fixed **$5** Exact / 30 days.

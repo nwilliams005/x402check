@@ -185,7 +185,7 @@ function softwareJsonLd(origin: string, pricePerTool: number) {
             name: "How much does x402check cost?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: `$${pricePerTool} USDC Exact per tool on Base (eip155:8453). Batch = N × unit in one settlement. Optional watch is $5 Exact / 30 days. No free tier. Live usage: ${origin}/stats.`,
+              text: `$${pricePerTool} USDC Exact per tool on Base (eip155:8453). Batch = N × unit in one settlement. Optional deep check is $0.05. Optional watch is $5 Exact / 30 days. No free tier. Live usage: ${origin}/stats.`,
             },
           },
         ],
@@ -241,7 +241,7 @@ ${headTags({
     </nav>
   </header>
   <main class="wrap hero">
-    <p class="eyebrow">No free tier · $${pricePerTool} / tool · batch = N×unit</p>
+    <p class="eyebrow">No free tier · $${pricePerTool} / tool · deep $0.05 · watch $5/30d</p>
     <h1>Trust-check a tool<br/><span>before your agent pays it.</span></h1>
     <p class="lede">
       Every check is paid. You get that tool’s <strong>verdict</strong> plus its
@@ -335,9 +335,11 @@ ${headTags({
   </header>
   <main class="wrap docs">
     <h1>Agent docs</h1>
-    <p class="lede">Paid per tool. No free checks. Recommended unit <strong>$${pricePerTool}</strong> (Bazaar micro-utils often $0.001–$0.005). Use before any x402 settle when you need to <em>check before paying</em>, ask <em>is this API a scam</em> / <em>is this x402 endpoint safe</em>, <em>verify payTo</em>, check uptime, compare sellers, or keep a budget guard.</p>
+    <p class="lede">Paid per tool. No free checks. Base unit <strong>$${pricePerTool}</strong>. Optional <strong>deep check $0.05</strong> (multi-probe + listings + recent on-chain sample). Optional <strong>watch $5 / 30 days</strong>. Use before any x402 settle when you need to <em>check before paying</em>, ask <em>is this API a scam</em> / <em>is this x402 endpoint safe</em>, <em>verify payTo</em>, check uptime, compare sellers, or keep a budget guard.</p>
     <h2>Single</h2>
     <pre>GET ${origin}/preflight?url=https%3A%2F%2Fwww.api-xpay.com%2Fx402%2Fping</pre>
+    <h2>Deep check ($0.05)</h2>
+    <p>Optional. <code>GET /preflight/deep?url=…</code> or MCP <code>deep_check</code>. Same base signals, plus repeated probes, a recent public Base USDC-to-payTo sample, Bazaar/402 Index listing checks, and drift vs last KV history. Honest limits: not OFAC, not wallet simulation, not full chain history.</p>
     <h2>Batch (N × $${pricePerTool} in one Exact payment)</h2>
     <pre>POST ${origin}/preflight
 {"urls":["https://a.example/x402","https://b.example/x402"]}</pre>

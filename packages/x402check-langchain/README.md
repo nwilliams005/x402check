@@ -45,4 +45,4 @@ await pay('https://seller.example/x402');
 - `X402CHECK_URL` — set to `https://x402check.dev`
 - `X402CHECK_SKIP=1` — kill-switch
 
-Paid **$0.002 USDC Exact per tool URL** on Base. See https://x402check.dev/llms.txt
+Paid **$0.01 USDC Exact per tool URL** on Base. Optional deep check **$0.05**. See https://x402check.dev/llms.txt

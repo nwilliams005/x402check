@@ -32,10 +32,13 @@ export const PAID_SINGLE_TOOLS = new Set(["preflight_check", "verify_payto"]);
 export const PAID_BATCH_TOOLS = new Set(["preflight_batch", "compare_tools"]);
 /** Fixed-price tools (e.g. $5/30d watch) — not per-URL unit pricing. */
 export const PAID_WATCH_TOOLS = new Set(["watch_tool"]);
+/** Fixed-price deep check ($0.05). */
+export const PAID_DEEP_TOOLS = new Set(["deep_check"]);
 export const PAID_TOOLS = new Set([
   ...PAID_SINGLE_TOOLS,
   ...PAID_BATCH_TOOLS,
   ...PAID_WATCH_TOOLS,
+  ...PAID_DEEP_TOOLS,
 ]);
 
 export type McpToolContent = { type: "text"; text: string };
@@ -96,6 +99,10 @@ export function billableToolCount(
     return n;
   }
   if (PAID_WATCH_TOOLS.has(toolName)) {
+    const url = typeof args.url === "string" ? args.url.trim() : "";
+    return url ? 1 : 0;
+  }
+  if (PAID_DEEP_TOOLS.has(toolName)) {
     const url = typeof args.url === "string" ? args.url.trim() : "";
     return url ? 1 : 0;
   }

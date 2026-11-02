@@ -1,6 +1,6 @@
 # @x402checkdev posting strategy
 
-Account: [@x402checkdev](https://x.com/x402checkdev) (display name **xcheck**). Product: [x402check.dev](https://x402check.dev) — $0.002 USDC-on-Base pre-payment check for AI agents using x402 (live 402 + payTo history → `ok | caution | avoid`). MCP at `https://x402check.dev/mcp`, npm `x402check-mcp`, plugins for Vercel AI SDK, LangChain, Cloudflare Agents, ElizaOS.
+Account: [@x402checkdev](https://x.com/x402checkdev) (display name **xcheck**). Product: [x402check.dev](https://x402check.dev) — $0.01 USDC-on-Base pre-payment check (deep $0.05) for AI agents using x402 (live 402 + payTo history → `ok | caution | avoid`). MCP at `https://x402check.dev/mcp`, npm `x402check-mcp`, plugins for Vercel AI SDK, LangChain, Cloudflare Agents, ElizaOS.
 
 Coming (tease only when true): public `/stats`, $5/mo watch subscription.
 
@@ -89,7 +89,7 @@ Avoid: emoji walls, ALL CAPS hype, "game changer", fake screenshots, engagement 
 - No emoji spam (0–1 max, usually zero).
 - **Never claim:** open source, audits, SOC2, usage/revenue numbers we do not have, "trusted by", partnerships we do not have, Solana-live while `ENABLE_SOLANA=false`.
 - **Never fabricate** scam victim stories. Generic failure modes we actually detect are OK.
-- Price is always `$0.002` USDC on Base (or Exact scheme language if naming the payment method). Watch is **$5/mo** when announced — not sooner as "available".
+- Base price is always `$0.01` USDC on Base (or Exact scheme language). Deep check is `$0.05`. Watch is **$5/30d** when announced — not sooner as "available".
 - Upsells: helpful only. One product mention per post is enough.
 
 ---
@@ -114,7 +114,7 @@ Agents on X often ingest raw text. Every agent-facing post should include at lea
 - Canonical URL: `https://x402check.dev`
 - MCP: `https://x402check.dev/mcp` or `npm i -g x402check-mcp`
 - Tool names: `preflight_check`, `verify_payto`, `compare_tools`
-- Price + network: `$0.002` USDC, Base / `eip155:8453`
+- Price + network: `$0.01` USDC base / `$0.05` deep, Base / `eip155:8453`
 - Agent docs: `https://x402check.dev/llms.txt`
 
 ---

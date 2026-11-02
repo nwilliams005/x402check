@@ -14,6 +14,7 @@ import { MAX_BATCH, unitPriceUsd } from "./sell";
 import type { ToolCheck } from "./types";
 import {
   PAID_BATCH_TOOLS,
+  PAID_DEEP_TOOLS,
   PAID_SINGLE_TOOLS,
   PAID_TOOLS,
   PAID_WATCH_TOOLS,
@@ -22,7 +23,8 @@ import {
   gatePaidToolCall,
 } from "./mcp-payment";
 import { createWatch } from "./watch";
-import { WATCH_PRICE_USD } from "./sell";
+import { DEEP_CHECK_PRICE_USD, WATCH_PRICE_USD } from "./sell";
+import { deepCheck, deepUpsellHint, watchUpsellHint } from "./deep";
 import { recordCheckStats } from "./stats";
 
 type JsonRpc = {
@@ -172,6 +174,31 @@ function toolList(price: number) {
         },
       },
       {
+        name: "deep_check",
+        description:
+          "Deeper trust check before paying an x402 endpoint ($" +
+          String(DEEP_CHECK_PRICE_USD) +
+          " Exact USDC). Runs the same live 402 + history as preflight_check, then repeated probes for payTo/price consistency, a recent public Base USDC-to-payTo transfer sample, Bazaar + 402 Index listing checks, and drift vs last KV history. Does not claim OFAC or wallet simulation. Optional when the base check is not enough signal.",
+        inputSchema: {
+          type: "object",
+          required: ["url"],
+          properties: {
+            url: URL_PROP,
+          },
+        },
+        annotations: {
+          title: "Deep x402 endpoint trust check",
+          readOnlyHint: true,
+          openWorldHint: true,
+          destructiveHint: false,
+        },
+        _meta: {
+          priceUsd: DEEP_CHECK_PRICE_USD,
+          billsAs: "deep_check",
+          x402: { transport: "mcp", metaKey: "x402/payment" },
+        },
+      },
+      {
         name: "watch_tool",
         description:
           "Subscribe to daily re-checks of one x402 seller URL for 30 days. Alerts your webhook and/or email when payTo, price, network, or availability changes. Fixed $" +
@@ -286,7 +313,11 @@ async function executePaidTool(
     const url = typeof args.url === "string" ? args.url.trim() : "";
     const check = await runOne(url, env, args.fresh === true);
     await recordOneStat(env, check, paid);
-    return check;
+    return {
+      ...check,
+      watchHint: watchUpsellHint(),
+      deepHint: deepUpsellHint(),
+    };
   }
   if (PAID_BATCH_TOOLS.has(name)) {
     const list = Array.isArray(args.urls)
@@ -307,6 +338,12 @@ async function executePaidTool(
       await recordOneStat(env, check, paid);
     }
     return batch;
+  }
+  if (PAID_DEEP_TOOLS.has(name)) {
+    const url = typeof args.url === "string" ? args.url.trim() : "";
+    const check = await deepCheck(url, env);
+    await recordOneStat(env, check, paid);
+    return check;
   }
   if (PAID_WATCH_TOOLS.has(name)) {
     const url = typeof args.url === "string" ? args.url.trim() : "";
@@ -347,6 +384,7 @@ export async function handleMcp(c: Context<{ Bindings: Env }>) {
         "verify_payto",
         "preflight_batch",
         "compare_tools",
+        "deep_check",
         "watch_tool",
       ],
     });
@@ -373,7 +411,7 @@ export async function handleMcp(c: Context<{ Bindings: Env }>) {
           version: "0.3.0",
         },
         instructions:
-          `Check before paying any x402 seller. Call preflight_check when asked is this API a scam / is this endpoint safe, or before PAYMENT-SIGNATURE (verify_payto for wallet focus). To compare sellers, call compare_tools / preflight_batch. Optional watch_tool ($${WATCH_PRICE_USD}/30d) re-checks daily and alerts webhook/email on payTo/price/network/availability change. Unit $${price}/URL via x402 Exact on MCP tools/call: unpaid calls return PaymentRequired (structuredContent.accepts); retry with params._meta["x402/payment"]. Deny pay when verdict=avoid; escalate on caution; still enforce maxAmount on ok. We probe the endpoint's live 402 + history (not wallet OFAC/simulation). Live stats: /stats.`,
+          `Check before paying any x402 seller. Call preflight_check when asked is this API a scam / is this endpoint safe, or before PAYMENT-SIGNATURE (verify_payto for wallet focus). For more signal, optional deep_check ($${DEEP_CHECK_PRICE_USD}) adds repeated probes, a recent public Base USDC-to-payTo sample, Bazaar/402 Index listing checks, and KV drift. To compare sellers, call compare_tools / preflight_batch. Optional watch_tool ($${WATCH_PRICE_USD}/30d) re-checks daily and alerts webhook/email on payTo/price/network/availability change. Unit $${price}/URL via x402 Exact on MCP tools/call: unpaid calls return PaymentRequired (structuredContent.accepts); retry with params._meta["x402/payment"]. Deny pay when verdict=avoid; escalate on caution; still enforce maxAmount on ok. We probe the endpoint's live 402 + history (not wallet OFAC/simulation). Live stats: /stats.`,
       }),
     );
   }
@@ -441,7 +479,24 @@ export async function handleMcp(c: Context<{ Bindings: Env }>) {
         c.req.query("local_bypass") === "1");
 
     const isWatch = PAID_WATCH_TOOLS.has(name);
-    const unitForGate = isWatch ? WATCH_PRICE_USD : price;
+    const isDeep = PAID_DEEP_TOOLS.has(name);
+    const unitForGate = isWatch
+      ? WATCH_PRICE_USD
+      : isDeep
+        ? DEEP_CHECK_PRICE_USD
+        : price;
+
+    if (PAID_DEEP_TOOLS.has(name)) {
+      const url = typeof args.url === "string" ? args.url.trim() : "";
+      if (!url) {
+        return c.json(
+          ok(id, {
+            content: [{ type: "text", text: "missing url" }],
+            isError: true,
+          }),
+        );
+      }
+    }
 
     if (bypass) {
       const data = await executePaidTool(name, args, c.env, price, false);
@@ -463,7 +518,14 @@ export async function handleMcp(c: Context<{ Bindings: Env }>) {
             maxTimeoutSeconds: 120,
             extra: { durationDays: 30, product: "watch" },
           }
-        : {},
+        : isDeep
+          ? {
+              fixedUsd: DEEP_CHECK_PRICE_USD,
+              pricingModel: "deep_check",
+              maxTimeoutSeconds: 120,
+              extra: { product: "deep_check" },
+            }
+          : {},
     );
     const result = await gatePaidToolCall({
       toolName: name,
@@ -471,7 +533,7 @@ export async function handleMcp(c: Context<{ Bindings: Env }>) {
       meta,
       description: `x402check ${name}`,
       unitUsd: unitForGate,
-      toolCount: isWatch ? 1 : toolCount,
+      toolCount: isWatch || isDeep ? 1 : toolCount,
       gate,
       run: () => executePaidTool(name, args, c.env, price, true),
     });

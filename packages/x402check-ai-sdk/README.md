@@ -56,4 +56,4 @@ await pay('https://seller.example/x402'); // throws on avoid
 - `X402CHECK_URL` — origin (default prod: set to `https://x402check.dev`)
 - `X402CHECK_SKIP=1` — kill-switch (synthetic ok)
 
-Paid **$0.002 USDC Exact per tool URL** on Base. No free tier. See https://x402check.dev/llms.txt
+Paid **$0.01 USDC Exact per tool URL** on Base. Optional deep check **$0.05**. No free tier. See https://x402check.dev/llms.txt

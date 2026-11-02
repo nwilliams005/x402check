@@ -18,7 +18,7 @@ tools = create_x402check_tools()
 # tools: preflight_check, verify_payto, compare_tools
 ```
 
-Paid **$0.002 USDC Exact per tool URL** on Base. No free tier.
+Paid **$0.01 USDC Exact per tool URL** on Base. Optional deep check **$0.05**. No free tier.
 
 - Docs: https://x402check.dev/llms.txt
 - Live stats (honest counts only): https://x402check.dev/stats

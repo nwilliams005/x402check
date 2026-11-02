@@ -105,7 +105,7 @@ test("loadStats without kv returns zeros", async () => {
 test("diffBaseline detects payTo/price/network/availability", () => {
   const a = {
     payTo: "0xabc",
-    priceUsd: 0.002,
+    priceUsd: 0.01,
     network: "eip155:8453",
     reachable: true,
     is402: true,
@@ -117,7 +117,7 @@ test("diffBaseline detects payTo/price/network/availability", () => {
     ["payTo"],
   );
   assert.deepEqual(
-    diffBaseline(a, { ...a, priceUsd: 0.01 }),
+    diffBaseline(a, { ...a, priceUsd: 0.05 }),
     ["price"],
   );
   assert.deepEqual(
@@ -201,14 +201,14 @@ test("formatOnChainLine and loadOnChainStats", async () => {
 test("formatBaselineLine is stable", () => {
   const line = formatBaselineLine({
     payTo: "0xabc",
-    priceUsd: 0.002,
+    priceUsd: 0.01,
     network: "eip155:8453",
     reachable: true,
     is402: true,
     verdict: "ok",
   });
   assert.match(line, /payTo=0xabc/);
-  assert.match(line, /price=\$0\.002/);
+  assert.match(line, /price=\$0\.01/);
   assert.match(line, /availability=reachable\+402/);
   assert.match(line, /verdict=ok/);
 });

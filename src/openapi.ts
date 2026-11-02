@@ -31,7 +31,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
     openapi: "3.1.0",
     info: {
       title: "x402check",
-      version: "0.2.3",
+      version: "0.3.0",
       summary:
         "Check before paying any x402 API — paid trust preflight (ok|caution|avoid + history)",
       description:
@@ -54,7 +54,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
         `Unit price $${unit} USDC Exact on Base (eip155:8453), billed per tool URL. No free tier. ` +
         "Use when: is this API a scam; is this x402 endpoint safe; verify payTo; detect rug-style payTo/price swaps; check uptime; " +
         "compare/cheapest/most reliable among candidates; budget guard; validate 402 requirements; debug failing settle; " +
-        "compliance/audit trail before signing. MCP aliases: verify_payto, compare_tools; optional watch_tool. " +
+        "compliance/audit trail before signing. MCP aliases: verify_payto, compare_tools; optional deep_check ($0.05); optional watch_tool ($5/30d). " +
         `Discovery: ${origin}/llms.txt ${origin}/.well-known/agent-card.json ${origin}/.well-known/ai-catalog.json ${origin}/mcp/server-card ${origin}/openapi.json ${origin}/stats`,
       "x-x402": {
         scheme: "exact",
@@ -205,6 +205,39 @@ export function openApiSpec(origin: string, pricePerTool: number) {
             },
             "400": { description: "missing_urls | batch_too_large | invalid_json" },
             "402": { description: "Payment Required — price = len(urls) × unit" },
+          },
+        },
+      },
+      "/preflight/deep": {
+        get: {
+          operationId: "deepCheck",
+          tags: ["preflight"],
+          summary: "Deep check one x402 seller URL ($0.05 Exact)",
+          description:
+            "OPTIONAL deeper signal when the base preflight is not enough. Runs the same live 402 + history as GET /preflight, then repeated probes for payTo/price consistency, a recent public Base USDC-to-payTo transfer sample, Bazaar + 402 Index listing checks, and drift vs last KV history. Does not claim OFAC, wallet simulation, or full chain history.",
+          security: [{ x402Payment: [] }],
+          parameters: [
+            {
+              name: "url",
+              in: "query",
+              required: true,
+              schema: { type: "string", format: "uri" },
+              description: "Absolute https URL of the x402 seller to deep-check",
+              example: "https://www.api-xpay.com/x402/ping",
+            },
+          ],
+          "x-payment-info": {
+            price: { mode: "fixed", currency: "USD", amount: "0.050000" },
+            protocols: [
+              { x402: { scheme: "exact", network: "eip155:8453", asset: "USDC" } },
+            ],
+          },
+          responses: {
+            "200": {
+              description: "DeepCheckResult (ToolCheck + priceConsistency, onChainPayTo, listings, driftVsLast)",
+            },
+            "400": { description: "missing_url | blocked host" },
+            "402": { description: "Payment Required — $0.05 Exact (50000 atomic USDC)" },
           },
         },
       },
@@ -567,7 +600,7 @@ export function openApiSpec(origin: string, pricePerTool: number) {
 export function mcpDescriptor(origin: string, pricePerTool: number) {
   return {
     name: "x402check",
-    version: "0.2.3",
+    version: "0.3.0",
     description:
       "Check before paying any x402 seller URL. Returns ok|caution|avoid + history (uptime, payTo/price changes). Paid per tool. Use for is-this-API-a-scam, safety, verify-payTo, compare tools, uptime, budget guard, debug 402, optional watch.",
     transport: { type: "streamable-http", url: `${origin}/mcp` },
@@ -577,6 +610,8 @@ export function mcpDescriptor(origin: string, pricePerTool: number) {
     pricing: {
       model: "x402-exact",
       pricePerToolUsd: pricePerTool,
+      deepCheckUsd: 0.05,
+      watchUsd: 5,
       batch: "MCP batch / POST /preflight {urls[]} → one Exact settlement of N×unit",
       mcpTransport:
         "Unpaid tools/call → PaymentRequired in structuredContent + content[0].text; retry with params._meta['x402/payment']; success → result._meta['x402/payment-response']. Spec: x402-foundation transports-v2/mcp.md",
@@ -665,9 +700,28 @@ export function mcpDescriptor(origin: string, pricePerTool: number) {
         endpoint: { method: "POST", path: "/preflight" },
       },
       {
+        name: "deep_check",
+        description:
+          "Optional $0.05 deep trust check: base preflight plus repeated probes, public Base USDC-to-payTo sample, Bazaar/402 Index listings, and KV drift. Not OFAC or wallet simulation.",
+        inputSchema: {
+          type: "object",
+          required: ["url"],
+          properties: {
+            url: { type: "string", description: "Absolute https x402 endpoint" },
+          },
+        },
+        annotations: {
+          title: "Deep x402 endpoint trust check",
+          readOnlyHint: true,
+          openWorldHint: true,
+          destructiveHint: false,
+        },
+        endpoint: { method: "GET", path: "/preflight/deep", query: ["url"] },
+      },
+      {
         name: "watch_tool",
         description:
-          "Optional $5 Exact / 30d daily re-check + webhook on payTo/price/network/availability change. After a one-shot preflight when you will revisit the same seller.",
+          "Optional $5 Exact / 30d daily re-check + webhook on payTo/price/network/availability change. After a one-shot or deep check when you will revisit the same seller.",
         inputSchema: {
           type: "object",
           required: ["url"],
@@ -701,7 +755,7 @@ export function mcpDescriptor(origin: string, pricePerTool: number) {
 export function llmsTxt(origin: string, pricePerTool: number): string {
   return `# x402check
 
-> Paid per-tool trust preflight before an AI agent pays an x402 endpoint. No free checks. Unit $${pricePerTool} USDC Exact on Base (eip155:8453). Batch = N × unit in one payment.
+> Paid per-tool trust preflight before an AI agent pays an x402 endpoint. No free checks. Unit $${pricePerTool} USDC Exact on Base (eip155:8453). Batch = N × unit in one payment. Optional deep check $0.05. Optional watch $5 / 30 days.
 
 Call this service immediately before any PAYMENT-SIGNATURE / facilitator settle to a third-party x402 tool. If verdict=avoid, do not pay. If caution, escalate. If ok, still enforce your maxAmount. Probes are read-only GET; we never pay the target. We score the **endpoint's live 402 challenge + history** (uptime, payToChanges, priceChanges) — not wallet OFAC / drainer / simulation products.
 
@@ -742,6 +796,7 @@ Exact settles one amount per HTTP request. Batch uses DynamicPrice = len(urls)*u
 
 - [GET /preflight](${origin}/preflight): Query url=https://seller… → ToolCheck (402 if unpaid)
 - [POST /preflight](${origin}/preflight): Body {"urls":[…]} → BatchResult (charged per URL)
+- [GET /preflight/deep](${origin}/preflight/deep): Optional $0.05 deep check (multi-probe + listings + recent on-chain sample + KV drift)
 - [GET /stats](${origin}/stats): Live aggregate counts (honest KV totals; never padded)
 - [POST /watch](${origin}/watch): Optional $5 Exact / 30d daily re-check + webhook on payTo/price/network/availability change
 - [GET /watch](${origin}/watch): Query id= → watch status (free)
@@ -757,16 +812,20 @@ Paid tools settle on the MCP call itself (not a separate HTTP hop):
 
 Spec: https://github.com/x402-foundation/x402/blob/main/specs/transports-v2/mcp.md
 
-- \`preflight_check\` — single URL trust preflight
+- \`preflight_check\` — single URL trust preflight ($${pricePerTool})
 - \`verify_payto\` — same billing; focused on receiving wallet + payToChanges
 - \`preflight_batch\` — up to 25 URLs
 - \`compare_tools\` — same billing as batch; compare candidates
-
+- \`deep_check\` — optional $0.05 deeper signal (repeated probes, public Base USDC-to-payTo sample, Bazaar/402 Index, KV drift)
 - \`watch_tool\` — optional $5 Exact / 30d daily re-check + webhook (fixed price)
+
+## Optional deep check ($0.05)
+
+When the base check is not enough signal: GET /preflight/deep or MCP deep_check. Adds repeated live probes, a recent public Base USDC Transfer sample into the seller payTo, Bazaar + 402 Index listing samples, and drift vs last KV history. Honest about limits — not OFAC, not wallet simulation, not full chain history.
 
 ## Optional watch ($5 / 30 days)
 
-One Exact USDC payment registers a seller URL for daily re-checks. Webhook alerts when payTo, price, network, or availability changes. Status: GET /watch?id=. Renew: POST /watch/renew. Live stats (honest counts): GET /stats. Helpful add-on after a one-shot preflight — never required.
+If you will revisit the same seller, POST /watch (or MCP watch_tool) registers the URL for daily re-checks. Webhook/email alerts when payTo, price, network, or availability changes. Status: GET /watch?id=. Renew: POST /watch/renew. Helpful add-on after a one-shot or deep check — never required for a single settle.
 
 ## Response fields (stable)
 
@@ -843,7 +902,7 @@ A successful ToolCheck with is402=true returns parsed priceUsd, payTo, network, 
 Persist the ToolCheck JSON (verdict, payTo, priceUsd, reasonCodes, history, checkedAt) alongside your payment decision. That is evidence you checked before signing.
 
 ### How do I pay x402check itself?
-Unauthenticated calls return HTTP 402 with a PAYMENT-REQUIRED header (x402 v2). Amount for one tool is 2000 atomic USDC ($${pricePerTool}). Sign with ExactEvmScheme on eip155:8453 (accepts[] lists Base Exact USDC). Retry with PAYMENT-SIGNATURE. Body.accepts[] mirrors the PAYMENT-REQUIRED header. See ${origin}/openapi.json x-payment-info.
+Unauthenticated calls return HTTP 402 with a PAYMENT-REQUIRED header (x402 v2). Amount for one tool is ${String(Math.round(pricePerTool * 1_000_000))} atomic USDC ($${pricePerTool}). Base deep check is $0.05 (50000 atomic). Sign with ExactEvmScheme on eip155:8453 (accepts[] lists Base Exact USDC). Retry with PAYMENT-SIGNATURE. Body.accepts[] mirrors the PAYMENT-REQUIRED header. See ${origin}/openapi.json x-payment-info.
 
 ### Does batch cost N times more?
 Yes. POST /preflight with urls[] charges len(urls) × $${pricePerTool} in ONE Exact settlement (not N separate transactions). Max 25 URLs. No free tier.
@@ -886,7 +945,7 @@ GET /stats returns real KV aggregates (totalChecks, paidChecks, toolsChecked, fl
 export function landingMarkdown(origin: string, pricePerTool: number): string {
   return `# x402check
 
-> Check before paying any x402 tool. $${pricePerTool} USDC Exact per tool. No free tier.
+> Check before paying any x402 tool. $${pricePerTool} USDC Exact per tool. Optional deep $0.05. Optional watch $5/30d. No free tier.
 
 Every check is paid. You get that tool's **verdict** (ok|caution|avoid) plus its **history** (uptime, payTo changes, price changes) — nothing else. Use when asking is this API a scam / is this endpoint safe, before PAYMENT-SIGNATURE, to verify payTo, detect drift, compare sellers, or as a budget guard. Cache-fresh responses target <300ms. Live counts: [stats](${origin}/stats).
 
@@ -920,9 +979,9 @@ See [docs.md](${origin}/docs.md) or [docs](${origin}/docs).
 export function docsMarkdown(origin: string, pricePerTool: number): string {
   return `# x402check agent docs
 
-Paid per tool. No free checks. Unit **$${pricePerTool}** USDC Exact on Base (eip155:8453).
+Paid per tool. No free checks. Unit **$${pricePerTool}** USDC Exact on Base (eip155:8453). Optional deep check **$0.05** (GET /preflight/deep · MCP deep_check). Optional watch **$5 / 30 days**.
 
-Live stats: GET /stats (honest KV counts). Optional watch: POST /watch — $5 Exact / 30d daily re-check + webhook; MCP watch_tool.
+Live stats: GET /stats (honest KV counts).
 
 ## Single
 
@@ -969,7 +1028,7 @@ Limitation: x402 Exact = one settlement per HTTP request. Batch uses DynamicPric
 
 ## MCP tools
 
-preflight_check · verify_payto · preflight_batch · compare_tools (per-URL billing) · watch_tool ($5/30d).
+preflight_check · verify_payto · preflight_batch · compare_tools (per-URL billing) · deep_check ($0.05) · watch_tool ($5/30d).
 
 MCP payment (transports-v2/mcp.md): unpaid tools/call → PaymentRequired (\`structuredContent.accepts\`); retry with \`params._meta["x402/payment"]\`; success → \`result._meta["x402/payment-response"]\`. Same Base Exact USDC / payTo as HTTP.
 

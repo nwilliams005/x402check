@@ -1,14 +1,14 @@
 /**
  * Per-tool pricing helpers.
- * Recommended unit: $0.002 / tool (Bazaar micro-utils often $0.001–$0.005;
- * minifetch robots preflight is $0.001 — we sit just above with history/uptime).
+ * Base unit: $0.01 / tool. Deep check: $0.05 (multi-probe + listings + recent
+ * on-chain USDC-to-payTo sample). Watch remains $5 / 30 days.
  *
  * Limitation: x402 Exact settles ONE amount per HTTP request. Batch POST charges
  * N × unit as a single DynamicPrice payment — not N separate on-chain settlements.
  */
 import type { HTTPRequestContext } from "@x402/core/server";
 
-export const DEFAULT_PRICE_PER_TOOL_USD = 0.002;
+export const DEFAULT_PRICE_PER_TOOL_USD = 0.01;
 export const MAX_BATCH = 25;
 
 export function unitPriceUsd(raw?: string): number {
@@ -79,6 +79,10 @@ export async function dynamicPriceForRequest(
   const n = Math.max(1, tools.length); // charge at least 1 if they hit paid route
   return money(n * unitUsd);
 }
+
+/** Deep check: multi-probe + listing + recent on-chain sample. */
+export const DEEP_CHECK_PRICE_USD = 0.05;
+export const DEEP_CHECK_ATOMIC = "50000";
 
 /** Watch subscription: $5 Exact USDC buys 30 days of daily re-checks per URL. */
 export const WATCH_PRICE_USD = 5;

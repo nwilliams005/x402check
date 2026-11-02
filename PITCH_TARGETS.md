@@ -1,7 +1,7 @@
 # x402check pitch & integration targets
 
 Research date: **2026-11-01** (America/Chicago).  
-Goal: maximize **paying** check volume ($0.002/check) and $5 watch subscriptions.  
+Goal: maximize **paying** check volume ($0.01/check) and $5 watch subscriptions.  
 Rule: every URL below was HTTP-checked from this box on 2026-11-01/02; unverified leads are omitted. Do not invent contacts.
 
 Ecosystem context (independent census, verified live): [Tanod — State of the Agent Economy, Oct 2026](https://tanod.dev/reports/agent-economy-2026-10.html) — ~35k CDP Bazaar resources, ~16k PayAI discovery listings, ~2.8k Circle discovery URLs, ~40k Official MCP Registry servers. Most listed x402 endpoints see almost no real multi-payer usage; a pre-payment safety check is an empty niche.
@@ -17,7 +17,7 @@ Ecosystem context (independent census, verified live): [Tanod — State of the A
 - **Verified:** `200` on repo + PR.
 
 ### 2. Coinbase x402 client stack (`@x402/*`, CDP Bazaar) — **P0**
-- **Why:** Default path for agents that discover and pay via CDP. Bazaar MCP already does `search_resources` + `proxy_tool_call` with auto-pay; inserting a check before pay protects the whole funnel and drives recurring $0.002 calls.
+- **Why:** Default path for agents that discover and pay via CDP. Bazaar MCP already does `search_resources` + `proxy_tool_call` with auto-pay; inserting a check before pay protects the whole funnel and drives recurring $0.01 calls.
 - **Path:** (a) Open a docs/example PR on [coinbase/x402](https://github.com/coinbase/x402) showing “preflight → then `@x402/fetch` / `@x402/mcp` pay”. (b) Pitch CDP for a Bazaar trust/quality signal or “recommended preflight” link on resource detail (partnership email via CDP support / Discord once Nicklaus approves outreach text). (c) Keep our own Bazaar listing fresh (settle with discovery extension).
 - **Contact / repo:** https://github.com/coinbase/x402 · Bazaar docs https://docs.cdp.coinbase.com/x402/bazaar · get-discovered https://docs.cdp.coinbase.com/x402/seller/get-discovered · MCP transport spec https://github.com/coinbase/x402/blob/main/specs/transports-v2/mcp.md · package metadata https://registry.npmjs.org/@x402/mcp  
 - **Verified:** `200` on all of the above (npmjs.com HTML pages often `403` bots; registry.npmjs.org is the verified source).
@@ -91,7 +91,7 @@ Ecosystem context (independent census, verified live): [Tanod — State of the A
 ## Pitch angles that convert (for people + agents)
 
 1. **Before PAYMENT-SIGNATURE** — “Is this API a scam / did payTo change / is the price what I was quoted?”
-2. **AgentKit / `@x402/mcp` default** — one line in the pay loop; we bill $0.002 only when they actually check.
+2. **AgentKit / `@x402/mcp` default** — one line in the pay loop; we bill $0.01 only when they actually check.
 3. **Watch for operators** — $5/30d daily re-check + webhook/email when payTo, price, network, or availability drifts.
 4. **Honest social proof** — only cite live https://x402check.dev/stats (never invent volume).
 

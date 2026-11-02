@@ -4,7 +4,7 @@ How agents, LLM hosts, and humans find and choose x402check.
 Research basis (2026-10-31 America/Chicago): CDP Bazaar semantic search + MCP `search_resources`, MCP `tools/list` description matching, x402scan/OpenAPI `x-guidance`, llms.txt, A2A agent cards, and user prompts into ChatGPT/Claude/Perplexity.
 
 Product facts we can claim (and must not overclaim):
-- Paid per tool URL checked ($0.002 Exact USDC on Base). No free tier.
+- Paid per tool URL checked ($0.01 Exact USDC on Base; optional deep $0.05). No free tier.
 - Returns `ok|caution|avoid` + that tool's history only (checks, uptimePct, payToChanges, priceChanges, recent).
 - Read-only GET probe of the seller; we never pay the target.
 - Differentiator vs x402check.xyz: we score the **endpoint's live 402 challenge and history**, not OFAC/drainer/simulation of a wallet.
