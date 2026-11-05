@@ -1,5 +1,7 @@
 # x402check
 
+[![M8ven Score](https://m8ven.ai/badge/mcp/nwilliams005/x402check)](https://m8ven.ai/mcp/nwilliams005/x402check?s=readme)
+
 **Check before paying any x402 seller URL** — trust-check it before your agent pays (is this API a scam / safe?).
 
 [x402check](https://x402check.dev) is a paid preflight for the [x402](https://x402.org) HTTP 402 payment protocol. Call it with a seller URL; get back `ok` | `caution` | `avoid` plus that endpoint's live `payTo`, price, and history (uptime, payTo changes, price changes).
