@@ -1,6 +1,7 @@
 # x402check
 
 [![M8ven Score](https://m8ven.ai/badge/mcp/nwilliams005/x402check)](https://m8ven.ai/mcp/nwilliams005/x402check?s=readme)
+[![x402check MCP connector](https://glama.ai/mcp/connectors/dev.x402check/mcp/badges/score.svg)](https://glama.ai/mcp/connectors/dev.x402check/mcp)
 
 **Check before paying any x402 seller URL** — trust-check it before your agent pays (is this API a scam / safe?).
 
