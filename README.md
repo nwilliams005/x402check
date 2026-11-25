@@ -1,6 +1,6 @@
 # x402check
 
-[![M8ven Score](https://m8ven.ai/badge/mcp/nwilliams005/x402check)](https://m8ven.ai/mcp/nwilliams005/x402check?s=readme)
+[![M8ven Score](https://m8ven.ai/badge/mcp/nwilliams005-x402check-rhmsfl?v=97f07b3fb0dd9347225eee33cf256128)](https://m8ven.ai/mcp/nwilliams005-x402check-rhmsfl?s=readme)
 [![x402check MCP connector](https://glama.ai/mcp/connectors/dev.x402check/mcp/badges/score.svg)](https://glama.ai/mcp/connectors/dev.x402check/mcp)
 [![nwilliams005/x402check MCP server](https://glama.ai/mcp/servers/nwilliams005/x402check/badges/score.svg)](https://glama.ai/mcp/servers/nwilliams005/x402check)
 
